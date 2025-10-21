@@ -1,10 +1,5 @@
-// Import dependencies
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
-
-// Load environment variables
-dotenv.config();
 
 // Create Express app
 const app = express();
@@ -23,7 +18,7 @@ app.get('/', (req, res) => {
 // app.use('/api/users', userRoutes);
 
 // Start server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000; // Render/other platforms will provide PORT
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
