@@ -1,14 +1,17 @@
 {
   "name": "elearning",
   "version": "1.0.0",
-  "description": "",
+  "description": "E-Learning Platform Backend",
   "type": "module",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
-     "start": "node -r dotenv/config --experimental-json-modules src/index.js",
-    "dev": "nodemon  -r dotenv/config --experimental-json-modules src/index.js"
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
   },
-  "github": "https://github.com/Pika003/e-Learning-Platform.git",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Pika003/e-Learning-Platform.git"
+  },
   "author": "Parag, Satyajit, Gopi, Aditya",
   "license": "ISC",
   "dependencies": {
@@ -29,3 +32,4 @@
     "razorpay": "^2.9.3"
   }
 }
+
