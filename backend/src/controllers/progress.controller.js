@@ -1,8 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { CourseProgress } from "../models/courseProgress.model.js";
-import { course } from "../models/course.model.js";
-import mongoose from "mongoose";
+import { Query, ID } from "node-appwrite";
+import { databases, databaseId, progressColId, coursesColId } from "../database/appwrite.js";
 
 // In-Memory Progress database
 global.mockProgressStore = global.mockProgressStore || {};
@@ -15,7 +14,7 @@ export const getProgress = asyncHandler(async (req, res) => {
         return res.status(400).json({ success: false, message: "courseId and videoId are required" });
     }
 
-    if (!global.isMongoConnected) {
+    if (!global.isAppwriteConnected) {
         const key = `${userId}_${courseId}_${videoId}`;
         const timestamp = global.mockProgressStore[key] || 0;
         return res.status(200).json(
@@ -23,15 +22,17 @@ export const getProgress = asyncHandler(async (req, res) => {
         );
     }
 
-    const progress = await CourseProgress.findOne({
-        userId,
-        courseId: new mongoose.Types.ObjectId(courseId),
-        videoId: new mongoose.Types.ObjectId(videoId)
-    });
+    const list = await databases.listDocuments(databaseId, progressColId, [
+        Query.equal('userId', userId),
+        Query.equal('courseId', courseId),
+        Query.equal('videoId', videoId)
+    ]);
+
+    const timestamp = list.total > 0 ? list.documents[0].lastWatchedTimestamp : 0;
 
     return res.status(200).json(
         new ApiResponse(200, {
-            lastWatchedTimestamp: progress ? progress.lastWatchedTimestamp : 0
+            lastWatchedTimestamp: timestamp
         }, "Progress fetched successfully")
     );
 });
@@ -44,28 +45,35 @@ export const updateProgress = asyncHandler(async (req, res) => {
         return res.status(400).json({ success: false, message: "courseId, videoId, and lastWatchedTimestamp are required" });
     }
 
-    if (!global.isMongoConnected) {
+    const parsedTimestamp = Math.max(0, parseFloat(lastWatchedTimestamp));
+
+    if (!global.isAppwriteConnected) {
         const key = `${userId}_${courseId}_${videoId}`;
-        global.mockProgressStore[key] = Math.max(0, parseFloat(lastWatchedTimestamp));
+        global.mockProgressStore[key] = parsedTimestamp;
         return res.status(200).json(
             new ApiResponse(200, { lastWatchedTimestamp: global.mockProgressStore[key] }, "Progress updated successfully (Mock Mode)")
         );
     }
 
-    const progress = await CourseProgress.findOneAndUpdate(
-        {
+    const list = await databases.listDocuments(databaseId, progressColId, [
+        Query.equal('userId', userId),
+        Query.equal('courseId', courseId),
+        Query.equal('videoId', videoId)
+    ]);
+
+    let progress;
+    if (list.total > 0) {
+        progress = await databases.updateDocument(databaseId, progressColId, list.documents[0].$id, {
+            lastWatchedTimestamp: parsedTimestamp
+        });
+    } else {
+        progress = await databases.createDocument(databaseId, progressColId, ID.unique(), {
             userId,
-            courseId: new mongoose.Types.ObjectId(courseId),
-            videoId: new mongoose.Types.ObjectId(videoId)
-        },
-        {
-            $set: { lastWatchedTimestamp: Math.max(0, parseFloat(lastWatchedTimestamp)) }
-        },
-        {
-            new: true,
-            upsert: true
-        }
-    );
+            courseId,
+            videoId,
+            lastWatchedTimestamp: parsedTimestamp
+        });
+    }
 
     return res.status(200).json(
         new ApiResponse(200, progress, "Progress updated successfully")
@@ -80,10 +88,8 @@ export const getProgressStats = asyncHandler(async (req, res) => {
         return res.status(400).json({ success: false, message: "courseId is required" });
     }
 
-    if (!global.isMongoConnected) {
-        // Return mock statistics (3 total lectures in Physics, count how many have progress > 0)
+    if (!global.isAppwriteConnected) {
         const totalLectures = 3;
-        
         let watchedCount = 0;
         const mockLecturesIds = ["660c6d2d46e01a4e14f8ab77", "660c6d2d46e01a4e14f8ab88", "660c6d2d46e01a4e14f8ab99"];
         
@@ -105,27 +111,23 @@ export const getProgressStats = asyncHandler(async (req, res) => {
         );
     }
 
-    const cId = new mongoose.Types.ObjectId(courseId);
+    // Fetch Course
+    const courseDoc = await databases.getDocument(databaseId, coursesColId, courseId);
+    let lectures = [];
+    try {
+        lectures = courseDoc.lectures ? (typeof courseDoc.lectures === 'string' ? JSON.parse(courseDoc.lectures) : courseDoc.lectures) : [];
+    } catch (e) { console.error(e); }
 
-    const courseStats = await course.aggregate([
-        { $match: { _id: cId } },
-        { $project: { totalLectures: { $size: { $ifNull: ["$lectures", []] } } } }
+    const totalLectures = lectures.length;
+
+    // Fetch progress stats
+    const progressList = await databases.listDocuments(databaseId, progressColId, [
+        Query.equal('userId', studentId),
+        Query.equal('courseId', courseId),
+        Query.greaterThan('lastWatchedTimestamp', 0)
     ]);
 
-    const totalLectures = courseStats[0]?.totalLectures || 0;
-
-    const watchedStats = await CourseProgress.aggregate([
-        {
-            $match: {
-                userId: new mongoose.Types.ObjectId(studentId),
-                courseId: cId,
-                lastWatchedTimestamp: { $gt: 0 }
-            }
-        },
-        { $count: "watchedCount" }
-    ]);
-
-    const watchedCount = watchedStats[0]?.watchedCount || 0;
+    const watchedCount = progressList.total;
     const progressPercentage = totalLectures > 0 ? Math.round((watchedCount / totalLectures) * 100) : 0;
 
     return res.status(200).json(

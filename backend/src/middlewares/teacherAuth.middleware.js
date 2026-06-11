@@ -1,7 +1,7 @@
 import { ApiError } from "../utils/ApiError.js";
-import {Teacher} from "../models/teacher.model.js";
 import jwt from "jsonwebtoken";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { databases, databaseId, usersColId } from "../database/appwrite.js";
 
 const authTeacher = asyncHandler(async(req,_,next)=>{
     const accToken = req.cookies?.Accesstoken
@@ -14,8 +14,12 @@ const authTeacher = asyncHandler(async(req,_,next)=>{
         process.env.ACCESS_TOKEN_SECRET || "default_access_token_secret_key_1234")
 
     let teacher;
-    if (global.isMongoConnected) {
-        teacher = await Teacher.findById(decodedAccToken?._id).select("-Password -Refreshtoken")
+    if (global.isAppwriteConnected) {
+        try {
+            teacher = await databases.getDocument(databaseId, usersColId, decodedAccToken?._id);
+        } catch (error) {
+            throw new ApiError(401, "invalid access token or user not found in Appwrite");
+        }
     } else {
         teacher = {
             _id: decodedAccToken?._id || "660c6d2d46e01a4e14f8ab22",

@@ -1,14 +1,13 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import {instance}  from "../app.js"
+import { instance }  from "../app.js"
 import crypto from "crypto"
-import {payment} from "../models/payment.model.js"
-import { Teacher } from "../models/teacher.model.js";
-
+import { ID } from "node-appwrite";
+import { databases, databaseId, paymentsColId, usersColId } from "../database/appwrite.js";
 
 const coursePayment = asyncHandler(async(req,res)=>{
-    const {fees, } = req.body
+    const {fees} = req.body
 
     if(!fees){
       throw new ApiError(400,"fees is required")
@@ -26,136 +25,137 @@ const coursePayment = asyncHandler(async(req,res)=>{
       .json( new ApiResponse(200, order,"order fetched"))
 })
 
-
 const getkey = asyncHandler(async(req,res)=>{
   return res
   .status(200)
   .json(new ApiResponse(200,{key:process.env.KEY_ID}, "razor key fetched"))
 })
 
-
 const coursePaymentConfirmation = asyncHandler(async(req,res)=>{
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
-    req.body;
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
   
   const studentID = req.Student._id
   const courseID = req.params.courseID
-  console.log(courseID)
 
   const body = razorpay_order_id + "|" + razorpay_payment_id;
 
   const expectedSignature = crypto
-    .createHmac("sha256", process.env.KEY_SECRET)
+    .createHmac("sha256", process.env.KEY_SECRET || "placeholder_key_secret")
     .update(body.toString())
     .digest("hex");
 
   const isAuthentic = expectedSignature === razorpay_signature;
 
   if (isAuthentic) {
-
-    const orderDetails = await payment.create({
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature,
-      courseID, 
-      studentID,
-    });
+    let orderDetails;
+    if (global.isAppwriteConnected) {
+        orderDetails = await databases.createDocument(databaseId, paymentsColId, ID.unique(), {
+          razorpay_order_id,
+          razorpay_payment_id,
+          razorpay_signature,
+          courseID, 
+          studentID,
+        });
+    } else {
+        orderDetails = {
+          _id: "mock_payment_" + Math.random().toString(36).substr(2, 9),
+          razorpay_order_id,
+          razorpay_payment_id,
+          razorpay_signature,
+          courseID, 
+          studentID,
+        };
+    }
 
     return res
-    .status(200)
-    .json(new ApiResponse(200,{orderDetails}, "payment confirmed" ))
+      .status(200)
+      .json(new ApiResponse(200,{orderDetails}, "payment confirmed" ))
   } else {
     throw new ApiError(400, "payment failed")
   }
 })
 
-
 const teacherAmount = asyncHandler(async(req,res)=>{
   const teacher = req.teacher
 
-  const newEnrolledStudentCount = await Teacher.aggregate([
-    {
-      $match: { _id: teacher._id }
-    },
-    {
-      $unwind: "$enrolledStudent"
-    },
-    {
-      $match: { "enrolledStudent.isNewEnrolled": true }
-    },
-    {
-      $group: {
-        _id: null,
-        count: { $sum: 1 }
-      }
-    }
-  ]);
-
-  const count = newEnrolledStudentCount.length > 0 ? newEnrolledStudentCount[0].count : 0;
-
-
-  await Teacher.findByIdAndUpdate(
-    teacher._id,
-    { $inc: { Balance: count * 500 } },
-   
-  );
-
-  const newTeacher = await Teacher.findOneAndUpdate(
-    { _id: teacher._id, "enrolledStudent.isNewEnrolled": true },
-    { $set: { "enrolledStudent.$[elem].isNewEnrolled": false } },
-    { 
-        new: true,
-        arrayFilters: [{ "elem.isNewEnrolled": true }],
-    }
-  );
-
-  if(!newTeacher){
-    const newTeacher = await Teacher.findById(
-      teacher._id
-    )
-
-    return res
-    .status(200)
-    .json(new ApiResponse(200, {newTeacher}, "balance"))
+  if (!global.isAppwriteConnected) {
+      // Mock teacher balance update
+      const mockTeacher = {
+          ...teacher,
+          Balance: (teacher.Balance || 0) + 500
+      };
+      return res.status(200).json(new ApiResponse(200, { newTeacher: mockTeacher }, "balance (Mock Mode)"));
   }
 
+  const teacherUser = await databases.getDocument(databaseId, usersColId, teacher._id);
+  
+  let teacherStudents = [];
+  try {
+      teacherStudents = teacherUser.enrolledStudent ? (typeof teacherUser.enrolledStudent === 'string' ? JSON.parse(teacherUser.enrolledStudent) : teacherUser.enrolledStudent) : [];
+  } catch (e) {
+      teacherStudents = [];
+  }
+
+  // Count new enrolled students
+  let count = 0;
+  teacherStudents.forEach(item => {
+      if (item.isNewEnrolled === true) {
+          count++;
+          item.isNewEnrolled = false; // set to false for future checks
+      }
+  });
+
+  const currentBalance = teacherUser.Balance || teacherUser.balance || 0;
+  const newBalance = currentBalance + (count * 500);
+
+  const newTeacher = await databases.updateDocument(databaseId, usersColId, teacher._id, {
+      Balance: newBalance,
+      enrolledStudent: JSON.stringify(teacherStudents)
+  });
 
   return res
-  .status(200)
-  .json(new ApiResponse(200, {newTeacher}, "balance"))
-  
+    .status(200)
+    .json(new ApiResponse(200, {newTeacher}, "balance"))
 })
 
-
 const withdrawAmount = asyncHandler(async(req,res)=>{
-
   const teacherId = req.teacher._id
   const amount = req.body.amount
 
-  console.log(amount);
-
-  const teacher = await Teacher.findById(teacherId);
-
-  if (!teacher) {
-    return res.status(404).json({ message: "Teacher not found" });
+  if (!global.isAppwriteConnected) {
+      // Mock withdrawal
+      const mockTeacher = {
+          ...req.teacher,
+          Balance: Math.max(0, (req.teacher.Balance || 1400) - amount)
+      };
+      return res.status(200).json(new ApiResponse(200, { newTeacher: mockTeacher }, "balance (Mock Mode)"));
   }
 
-  if (teacher.Balance < amount) {
+  const teacher = await databases.getDocument(databaseId, usersColId, teacherId);
+
+  const currentBalance = teacher.Balance || teacher.balance || 0;
+
+  if (currentBalance < amount) {
     return res.status(400).json({ message: "Insufficient balance" });
   }
 
-  teacher.Balance -= amount;
-  teacher.WithdrawalHistory.push({ amount });
-  await teacher.save();
+  let withdrawalHistory = [];
+  try {
+      withdrawalHistory = teacher.WithdrawalHistory ? (typeof teacher.WithdrawalHistory === 'string' ? JSON.parse(teacher.WithdrawalHistory) : teacher.WithdrawalHistory) : [];
+  } catch (e) {
+      withdrawalHistory = [];
+  }
 
-  const newTeacher = await Teacher.findById(teacherId)
+  withdrawalHistory.push({ amount, date: new Date().toISOString() });
+
+  const newTeacher = await databases.updateDocument(databaseId, usersColId, teacherId, {
+      Balance: currentBalance - amount,
+      WithdrawalHistory: JSON.stringify(withdrawalHistory)
+  });
 
   return res
-  .status(200)
-  .json(new ApiResponse(200, {newTeacher}, "balance"))
-  
+    .status(200)
+    .json(new ApiResponse(200, {newTeacher}, "balance"))
 })
-
-
 
 export {coursePayment, getkey, coursePaymentConfirmation, teacherAmount, withdrawAmount}

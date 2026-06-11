@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
-import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { databases, databaseId, usersColId } from "../database/appwrite.js";
 
 export const verifyJWT = asyncHandler(async (req, _, next) => {
     try {
@@ -14,8 +14,12 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
         const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET || "default_access_token_secret_key_1234");
 
         let user;
-        if (global.isMongoConnected) {
-            user = await User.findById(decodedToken?._id).select("-password -Refreshtoken");
+        if (global.isAppwriteConnected) {
+            try {
+                user = await databases.getDocument(databaseId, usersColId, decodedToken?._id);
+            } catch (error) {
+                throw new ApiError(401, "Invalid Access Token: user not found in Appwrite");
+            }
         } else {
             // Statelessly recreate mock user object from JWT payload
             user = {
