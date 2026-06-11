@@ -134,7 +134,7 @@ userSchema.methods.generateAccessToken = function() {
             Email: this.email, // compatibility
             role: this.role
         },
-        process.env.ACCESS_TOKEN_SECRET,
+        process.env.ACCESS_TOKEN_SECRET || "default_access_token_secret_key_1234",
         {
             expiresIn: process.env.ACCESS_TOKEN_EXPIRY || "1d"
         }
@@ -149,7 +149,7 @@ userSchema.methods.generateRefreshToken = function() {
             Email: this.email, // compatibility
             role: this.role
         },
-        process.env.REFRESH_TOKEN_SECRET,
+        process.env.REFRESH_TOKEN_SECRET || "default_refresh_token_secret_key_5678",
         {
             expiresIn: process.env.REFRESH_TOKEN_EXPIRY || "10d"
         }

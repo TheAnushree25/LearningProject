@@ -11,7 +11,7 @@ const authTeacher = asyncHandler(async(req,_,next)=>{
     }
 
     const decodedAccToken = jwt.verify(accToken,
-        process.env.ACCESS_TOKEN_SECRET)
+        process.env.ACCESS_TOKEN_SECRET || "default_access_token_secret_key_1234")
 
     const teacher = await Teacher.findById(decodedAccToken?._id).select("-Password -Refreshtoken")
 
