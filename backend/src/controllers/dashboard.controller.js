@@ -8,15 +8,25 @@ import mongoose from "mongoose";
 
 export const getStudentStats = asyncHandler(async (req, res) => {
     const { studentId } = req.params;
+
+    if (!global.isMongoConnected) {
+        // Return mock student statistics
+        return res.status(200).json(
+            new ApiResponse(200, {
+                enrolledCourses: 1,
+                upcomingClasses: 1,
+                totalHoursWatched: 0.8
+            }, "Student stats generated successfully (Mock Mode)")
+        );
+    }
+
     const stdId = new mongoose.Types.ObjectId(studentId);
 
-    // 1. Total Enrolled Courses count via aggregation
     const enrolledCoursesCount = await course.aggregate([
         { $match: { enrolledStudent: stdId } },
         { $count: "count" }
     ]);
 
-    // 2. Upcoming Classes via aggregation
     const upcomingClasses = await course.aggregate([
         { $match: { enrolledStudent: stdId } },
         { $unwind: "$liveClasses" },
@@ -24,7 +34,6 @@ export const getStudentStats = asyncHandler(async (req, res) => {
         { $count: "count" }
     ]);
 
-    // 3. Total watched seconds via aggregation
     const totalWatchSeconds = await CourseProgress.aggregate([
         { $match: { userId: stdId } },
         { $group: { _id: null, totalSeconds: { $sum: "$lastWatchedTimestamp" } } }
@@ -41,9 +50,21 @@ export const getStudentStats = asyncHandler(async (req, res) => {
 
 export const getTeacherStats = asyncHandler(async (req, res) => {
     const { teacherId } = req.params;
+
+    if (!global.isMongoConnected) {
+        // Return mock instructor statistics
+        return res.status(200).json(
+            new ApiResponse(200, {
+                totalCourses: 2,
+                totalStudents: 1,
+                balance: 1400,
+                totalWithdrawals: 600
+            }, "Teacher stats generated successfully (Mock Mode)")
+        );
+    }
+
     const tId = new mongoose.Types.ObjectId(teacherId);
 
-    // 1. Course Stats (Total courses, total unique students)
     const stats = await course.aggregate([
         { $match: { enrolledteacher: tId } },
         {
@@ -56,7 +77,6 @@ export const getTeacherStats = asyncHandler(async (req, res) => {
         {
             $project: {
                 totalCourses: 1,
-                // Flatten array of arrays and get unique student count
                 totalStudents: {
                     $size: {
                         $reduce: {
@@ -70,7 +90,6 @@ export const getTeacherStats = asyncHandler(async (req, res) => {
         }
     ]);
 
-    // 2. Instructor Balance and Withdrawal Summary via user aggregation
     const teacherFinancials = await User.aggregate([
         { $match: { _id: tId, role: "instructor" } },
         {
@@ -94,18 +113,29 @@ export const getTeacherStats = asyncHandler(async (req, res) => {
 });
 
 export const getAdminStats = asyncHandler(async (req, res) => {
-    // 1. Count users by role using aggregation
+    if (!global.isMongoConnected) {
+        // Return mock admin statistics
+        return res.status(200).json(
+            new ApiResponse(200, {
+                studentsCount: 1,
+                instructorsCount: 1,
+                adminsCount: 1,
+                approvedCourses: 2,
+                pendingCourses: 0,
+                pendingInquiries: 0
+            }, "Admin stats generated successfully (Mock Mode)")
+        );
+    }
+
     const userRoleCounts = await User.aggregate([
         { $group: { _id: "$role", count: { $sum: 1 } } }
     ]);
 
-    // Format roles counts
     const rolesMap = {};
     userRoleCounts.forEach(item => {
         rolesMap[item._id] = item.count;
     });
 
-    // 2. Course counts by approval status
     const courseStats = await course.aggregate([
         { $group: { _id: "$isapproved", count: { $sum: 1 } } }
     ]);
@@ -116,7 +146,6 @@ export const getAdminStats = asyncHandler(async (req, res) => {
         if (item._id === false) coursesMap.pending = item.count;
     });
 
-    // 3. Pending Inquiries count
     const pendingInquiries = await contact.aggregate([
         { $match: { status: false } },
         { $count: "count" }

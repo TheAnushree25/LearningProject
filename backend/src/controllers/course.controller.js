@@ -6,8 +6,80 @@ import { Teacher } from "../models/teacher.model.js";
 import {Sendmail} from "../utils/Nodemailer.js"
 import mongoose from "mongoose";
 
+// In-memory mock database of courses
+const MOCK_COURSES = [
+    {
+        _id: "660c6d2d46e01a4e14f8ab55",
+        coursename: "physics",
+        description: "Master the fundamental concepts of physics, from Classical Mechanics to electromagnetism.",
+        isapproved: true,
+        enrolledteacher: {
+            _id: "660c6d2d46e01a4e14f8ab22",
+            Firstname: "Parag",
+            Lastname: "Kadyan",
+            Email: "teacher@test.com",
+            role: "instructor"
+        },
+        enrolledStudent: ["660c6d2d46e01a4e14f8ab11"],
+        schedule: [
+            { day: 1, starttime: 600, endtime: 720 }, // Mon 10:00 - 12:00
+            { day: 3, starttime: 600, endtime: 720 }  // Wed 10:00 - 12:00
+        ],
+        liveClasses: [
+            {
+                title: "Live Q&A Session",
+                timing: 600,
+                date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days from now
+                link: "https://zoom.us/mocklink",
+                status: "upcoming"
+            }
+        ],
+        lectures: [
+            {
+                _id: "660c6d2d46e01a4e14f8ab77",
+                title: "Lecture 1: Kinematics & One-Dimensional Motion",
+                videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+                description: "An introduction to speed, velocity, acceleration, and reference frames in physics."
+            },
+            {
+                _id: "660c6d2d46e01a4e14f8ab88",
+                title: "Lecture 2: Newton's Laws of Motion",
+                videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+                description: "Detailed study of Newton's three laws of motion with real-world applications."
+            },
+            {
+                _id: "660c6d2d46e01a4e14f8ab99",
+                title: "Lecture 3: Work, Energy & Power",
+                videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+                description: "Analyzing kinetic energy, potential energy, work-energy theorem, and conservation of energy."
+            }
+        ]
+    },
+    {
+        _id: "660c6d2d46e01a4e14f8ab56",
+        coursename: "chemistry",
+        description: "Explore atomic structures, chemical bonds, thermodynamics, and organic compounds.",
+        isapproved: true,
+        enrolledteacher: {
+            _id: "660c6d2d46e01a4e14f8ab22",
+            Firstname: "Parag",
+            Lastname: "Kadyan",
+            Email: "teacher@test.com",
+            role: "instructor"
+        },
+        enrolledStudent: [],
+        schedule: [
+            { day: 2, starttime: 600, endtime: 720 }
+        ],
+        liveClasses: [],
+        lectures: []
+    }
+];
 
 const getCourse = asyncHandler(async(req,res)=>{
+    if (!global.isMongoConnected) {
+        return res.status(200).json(new ApiResponse(200, MOCK_COURSES, "All courses (Mock Mode)"));
+    }
 
     const courses = await course.find(
       {isapproved:true}
@@ -16,20 +88,21 @@ const getCourse = asyncHandler(async(req,res)=>{
     return res
     .status(200)
     .json(new ApiResponse(200, courses, "All courses"))
-
 })
 
 const getcourseTeacher = asyncHandler(async(req,res)=>{
-
     const coursename = req.params.coursename;
 
     if(!coursename){
         throw new ApiError(400, "Choose a course")
     }
 
+    if (!global.isMongoConnected) {
+        const matched = MOCK_COURSES.filter(c => c.coursename === coursename);
+        return res.status(200).json(new ApiResponse(200, matched, "details fetched (Mock Mode)"));
+    }
+
     const courseTeachers = await course.find({ coursename, isapproved:true }).populate('enrolledteacher');
-
-
 
     if (!courseTeachers || courseTeachers.length === 0) {
         throw new ApiError(400, "No teachers found for the specified course");
@@ -38,13 +111,10 @@ const getcourseTeacher = asyncHandler(async(req,res)=>{
     return res
     .status(200)
     .json( new ApiResponse(200, courseTeachers, "details fetched"))
-    
 })
-
 
 const addCourseTeacher = asyncHandler(async(req,res)=>{
     const loggedTeacher = req.teacher
-
     const teacherParams = req.params.id
 
     if(!teacherParams){
@@ -55,12 +125,7 @@ const addCourseTeacher = asyncHandler(async(req,res)=>{
       throw new ApiError(400,"not authorized")
     }
 
-    
-
     const{coursename,description, schedule} = req.body
-
-    console.log(schedule)
-
 
     if(!schedule){
       throw new ApiError(400, "Schedule of the course is required.")
@@ -68,6 +133,22 @@ const addCourseTeacher = asyncHandler(async(req,res)=>{
 
     if ([coursename,description].some((field) => field?.trim() === "")) {
       throw new ApiError(400, "All fields are required");
+    }
+
+    if (!global.isMongoConnected) {
+        const newMockCourse = {
+            _id: "mock_course_" + Math.random().toString(36).substr(2, 9),
+            coursename: coursename.toLowerCase(),
+            description,
+            isapproved: true, // auto-approve in mock mode
+            enrolledteacher: loggedTeacher,
+            enrolledStudent: [],
+            schedule,
+            liveClasses: [],
+            lectures: []
+        };
+        MOCK_COURSES.push(newMockCourse);
+        return res.status(200).json(new ApiResponse(200, { newCourse: newMockCourse, loggedTeacher }, "new course created (Mock Mode)"));
     }
 
     const schedules = await course.aggregate([
@@ -105,15 +186,12 @@ const addCourseTeacher = asyncHandler(async(req,res)=>{
       throw new ApiError(400, "Already enrolled in a course with the same timing.")
     }
 
-
     const newCourse = await course.create({
       coursename,
       description,
       schedule,
       enrolledteacher: loggedTeacher._id,
     })
-
-    console.log(newCourse)
 
     if(!newCourse){
       throw new ApiError(400, "couldnt create course")
@@ -122,14 +200,10 @@ const addCourseTeacher = asyncHandler(async(req,res)=>{
     return res
     .status(200)
     .json(new ApiResponse(200, {newCourse, loggedTeacher}, "new course created"))
-    
 })
 
-
 const addCourseStudent = asyncHandler(async(req,res)=>{
- 
   const loggedStudent = req.Student
-
   const studentParams = req.params.id
 
   if(!studentParams){
@@ -146,8 +220,17 @@ const addCourseStudent = asyncHandler(async(req,res)=>{
     throw new ApiError(400, "select a course")
   }
 
-  const thecourse = await course.findById(courseID) //
+  if (!global.isMongoConnected) {
+      const matchCourse = MOCK_COURSES.find(c => c._id === courseID);
+      if (matchCourse) {
+          if (!matchCourse.enrolledStudent.includes(loggedStudent._id)) {
+              matchCourse.enrolledStudent.push(loggedStudent._id);
+          }
+      }
+      return res.status(200).json(new ApiResponse(200, { selectedCourse: matchCourse, loggedStudent }, "successfully opted in course (Mock Mode)"));
+  }
 
+  const thecourse = await course.findById(courseID)
   const EC = thecourse.schedule
 
   const schedules = await course.aggregate([
@@ -180,7 +263,6 @@ const addCourseStudent = asyncHandler(async(req,res)=>{
       }
     }
   }
-
   
   if(isconflict){
     throw new ApiError(400, "Already enrolled in a course with the same timing.")
@@ -218,19 +300,7 @@ const addCourseStudent = asyncHandler(async(req,res)=>{
       new: true
   })
 
-  await Sendmail(loggedStudent.Email, `Payment Confirmation for Course Purchase`, 
-    `<html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <h1 style="color: #4CAF50; text-align: center;">Payment Successful!</h1>
-        <p style="font-size: 16px; text-align: center;">Dear ${loggedStudent.Firstname},</p>
-        <p style="font-size: 16px; text-align: center;">We are pleased to inform you that your payment for the course has been successfully processed.</p>
-         <p style="font-size: 16px;">You can start accessing the course immediately by logging into your account.</p>
-        <p style="font-size: 16px;">Best regards,</p>
-        <p style="font-size: 16px;"><strong>The Shiksharthee Team</strong></p>
-        <p style="font-size: 14px;">&copy; 2024 Shiksharthee. All rights reserved.</p>
-        </body>
-    </html>`
-  )
+  await Sendmail(loggedStudent.Email, `Payment Confirmation`, `Payment Successful!`)
 
   return res
   .status(200)
@@ -246,6 +316,11 @@ const enrolledcourseSTD = asyncHandler(async(req,res)=>{
 
   if(stdID != req.Student._id){
     throw new ApiError(400, "params and logged student id doesnt match")
+  }
+
+  if (!global.isMongoConnected) {
+      const matched = MOCK_COURSES.filter(c => c.enrolledStudent.includes(stdID));
+      return res.status(200).json(new ApiResponse(200, matched, "student and enrolled courses (Mock Mode)"));
   }
 
   const studentEnrolledCourses = await course.aggregate([
@@ -289,9 +364,7 @@ const enrolledcourseSTD = asyncHandler(async(req,res)=>{
   return res
   .status(200)
   .json( new ApiResponse(200, studentEnrolledCourses, "student and enrolled courses"))
-
 })
-
 
 const enrolledcourseTeacher = asyncHandler(async(req,res)=>{
   const teacherID = req.params.id
@@ -302,6 +375,11 @@ const enrolledcourseTeacher = asyncHandler(async(req,res)=>{
 
   if(teacherID != req.teacher._id){
     throw new ApiError(400, "params and logged teacher id doesnt match")
+  }
+
+  if (!global.isMongoConnected) {
+      const matched = MOCK_COURSES.filter(c => c.enrolledteacher._id === teacherID);
+      return res.status(200).json(new ApiResponse(200, matched, "teacher and enrolled course (Mock Mode)"));
   }
 
   const teacherEnrolled = await course.aggregate([
@@ -330,7 +408,6 @@ const enrolledcourseTeacher = asyncHandler(async(req,res)=>{
 
 const addClass = asyncHandler(async(req,res) => {
   const {title, date, timing, link, status } = req.body
-
   const loggedTeacher = req.teacher
 
   if(!timing || !date){
@@ -338,21 +415,28 @@ const addClass = asyncHandler(async(req,res) => {
   }
 
   if ([title, link, status].some((field) => field?.trim() === "")) {
-  throw new ApiError(400, "All fields are required");
+    throw new ApiError(400, "All fields are required");
   }
 
   const {courseId, teacherId } = req.params
-  const dateObject = new Date(date);
 
+  if (!global.isMongoConnected) {
+      const matchCourse = MOCK_COURSES.find(c => c._id === courseId);
+      if (matchCourse) {
+          matchCourse.liveClasses.push({ title, timing, date: new Date(date), link, status });
+      }
+      return res.status(200).json(new ApiResponse(200, { enrolledCourse: matchCourse, loggedTeacher }, "class added successfully (Mock Mode)"));
+  }
+
+  const dateObject = new Date(date);
   const enrolledTeacher = await course.findOne({
-  _id: courseId,
-  enrolledteacher: teacherId,
-  isapproved:true,
+      _id: courseId,
+      enrolledteacher: teacherId,
+      isapproved:true,
   })
-  
 
   if(!enrolledTeacher){
-  throw new ApiError(400, "not authorized")
+     throw new ApiError(400, "not authorized")
   }
 
   const cst = timing - 60;
@@ -385,19 +469,18 @@ const addClass = asyncHandler(async(req,res) => {
     },
   ]);
 
-
   if(conflictClass.length>0){
     throw new ApiError(400, "You already have another class for similar timing.")
   }
 
   const enrolledCourse = await course.findOneAndUpdate(
-  { _id: courseId }, 
-  { $push: { liveClasses: {title, date, timing, link, status } } },
-  { new: true }  
+      { _id: courseId }, 
+      { $push: { liveClasses: {title, date, timing, link, status } } },
+      { new: true }  
   );
   
   if(!enrolledCourse){
-  throw new ApiError(400, "error occured while adding the class")
+     throw new ApiError(400, "error occured while adding the class")
   }
 
   return res
@@ -405,12 +488,25 @@ const addClass = asyncHandler(async(req,res) => {
   .json(new ApiResponse(200, {enrolledCourse, loggedTeacher}, "class added successfully"))
 })
 
-
-
 const stdEnrolledCoursesClasses = asyncHandler(async(req,res)=>{
   const Student = req.Student
 
-  
+  if (!global.isMongoConnected) {
+      const classes = [
+          {
+              _id: "classes",
+              liveClasses: MOCK_COURSES.filter(c => c.enrolledStudent.includes(Student._id)).flatMap(c => c.liveClasses.map(lc => ({
+                  coursename: c.coursename,
+                  title: lc.title,
+                  timing: lc.timing,
+                  link: lc.link,
+                  status: lc.status,
+                  date: lc.date
+              })))
+          }
+      ];
+      return res.status(200).json(new ApiResponse(200, { Student, classes }, "fetched classes successfully (Mock Mode)"));
+  }
 
   const classes = await course.aggregate([
     {
@@ -444,11 +540,6 @@ const stdEnrolledCoursesClasses = asyncHandler(async(req,res)=>{
     }
   ]);
 
-
-  if(!classes){
-    throw new ApiError(400, "couldn't fetch the classes")
-  }
-
   return res
   .status(200)
   .json(new ApiResponse(200, {Student, classes}, "fetched classes successfully"))
@@ -456,6 +547,23 @@ const stdEnrolledCoursesClasses = asyncHandler(async(req,res)=>{
 
 const teacherEnrolledCoursesClasses = asyncHandler(async(req,res)=>{
   const teacher = req.teacher
+
+  if (!global.isMongoConnected) {
+      const classes = [
+          {
+              _id: "classes",
+              liveClasses: MOCK_COURSES.filter(c => c.enrolledteacher._id === teacher._id).flatMap(c => c.liveClasses.map(lc => ({
+                  coursename: c.coursename,
+                  title: lc.title,
+                  timing: lc.timing,
+                  link: lc.link,
+                  status: lc.status,
+                  date: lc.date
+              })))
+          }
+      ];
+      return res.status(200).json(new ApiResponse(200, { teacher, classes }, "fetched classes successfully (Mock Mode)"));
+  }
 
   const classes = await course.aggregate([
     {
@@ -489,19 +597,13 @@ const teacherEnrolledCoursesClasses = asyncHandler(async(req,res)=>{
     }
   ]);
 
-  if(!classes){
-   throw new ApiError(400, "couldn't fetch the classes")
-  }
-
   return res
   .status(200)
   .json(new ApiResponse(200, {teacher, classes}, "fetched classes successfully"))
 })
 
-
 const canStudentEnroll = asyncHandler(async(req,res)=>{
   const loggedStudent = req.Student
-
   const studentParams = req.params.id
 
   if(!studentParams){
@@ -518,8 +620,11 @@ const canStudentEnroll = asyncHandler(async(req,res)=>{
     throw new ApiError(400, "select a course")
   }
 
-  const thecourse = await course.findById(courseID) //
+  if (!global.isMongoConnected) {
+      return res.status(200).json(new ApiResponse(200, {}, "student can enroll (Mock Mode)"));
+  }
 
+  const thecourse = await course.findById(courseID)
   const EC = thecourse.schedule
 
   const schedules = await course.aggregate([
@@ -553,7 +658,6 @@ const canStudentEnroll = asyncHandler(async(req,res)=>{
     }
   }
 
-  
   if(isconflict){
     throw new ApiError(400, "Already enrolled in a course with the same timing.")
   }
@@ -569,6 +673,10 @@ const canStudentEnroll = asyncHandler(async(req,res)=>{
 })
 
 const courseCatalog = asyncHandler(async(req,res)=>{
+  if (!global.isMongoConnected) {
+      return res.status(200).json(new ApiResponse(200, MOCK_COURSES, "Course catalog retrieved successfully (Mock Mode)"));
+  }
+
   const catalog = await course.aggregate([
       {
           $match: {
@@ -612,10 +720,4 @@ const courseCatalog = asyncHandler(async(req,res)=>{
   .json(new ApiResponse(200, catalog, "Course catalog retrieved successfully"));
 })
 
-export {getCourse, getcourseTeacher, addCourseTeacher, addCourseStudent, enrolledcourseSTD, enrolledcourseTeacher, addClass, stdEnrolledCoursesClasses, teacherEnrolledCoursesClasses, canStudentEnroll, courseCatalog} 
-
-
-
-
-
-
+export {getCourse, getcourseTeacher, addCourseTeacher, addCourseStudent, enrolledcourseSTD, enrolledcourseTeacher, addClass, stdEnrolledCoursesClasses, teacherEnrolledCoursesClasses, canStudentEnroll, courseCatalog}
