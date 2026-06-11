@@ -19,8 +19,8 @@ app.use(cookieParser())
 
 
 export const instance = new Razorpay({
-    key_id: process.env.KEY_ID,
-    key_secret: process.env.KEY_SECRET
+    key_id: process.env.KEY_ID || "rzp_test_placeholder_key_id",
+    key_secret: process.env.KEY_SECRET || "placeholder_key_secret"
 })
 
 // auth routes
