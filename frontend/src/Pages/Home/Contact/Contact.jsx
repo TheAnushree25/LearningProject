@@ -8,29 +8,37 @@ function Contact() {
   const [email, setEmail] = useState('');
   const [msg, setMsg] = useState('');
 
-  const handlemsg = async(e)=>{
+  const handlemsg = async (e) => {
     e.preventDefault();
-    if(name === '' || email === '' || msg === ''){
-      alert("All filds are required!")
-    }else if((!/\S+@\S+\.\S+/.test(email))){
-      alert("Enter a valid email!")
-    }else{
-      const data = await fetch('/api/admin/contact-us',{
+    if (name.trim() === '' || email.trim() === '' || msg.trim() === '') {
+      alert("All fields are required!");
+      return;
+    }
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      alert("Please enter a valid email address!");
+      return;
+    }
+    try {
+      const response = await fetch('/api/contact', {
         method: 'POST',
-        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({name, email, message: msg}),
-      })
+        body: JSON.stringify({ name, email, message: msg }),
+      });
 
-      const response = await data.json();
-      alert(response.message);
-      setName('');
-      setEmail('');
-      setMsg('');
+      const resData = await response.json();
+      alert(resData.message || "Message sent successfully!");
+      if (response.ok) {
+        setName('');
+        setEmail('');
+        setMsg('');
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Failed to submit. Please check your internet connection.");
     }
-  }
+  };
 
   return (
     <>
@@ -40,7 +48,7 @@ function Contact() {
         <hr className="underLine"/>
         <div className="content">
           <img src={Mail} width={700} alt="" />
-          <form  className="form-submit">
+          <form onSubmit={handlemsg} className="form-submit">
             <h4>Send Message</h4>
             <input
               type="text"
@@ -48,12 +56,14 @@ function Contact() {
               className="input"
               value={name}
               onChange={(e)=>setName(e.target.value)}
+              required
             />
             <input
-              type="text"
+              type="email"
               placeholder="Email Address"
               value={email}
               onChange={(e)=>setEmail(e.target.value)}
+              required
             />
             <textarea
               placeholder="Message"
@@ -61,8 +71,9 @@ function Contact() {
               name="message"
               value={msg}
               onChange={(e)=>setMsg(e.target.value)}
+              required
             />
-            <button onClick={handlemsg} className="w-[19rem] bg-light-blue-800">Send A Message</button>
+            <button type="submit" className="w-[19rem] bg-light-blue-800">Send A Message</button>
           </form>
         </div>
       </div>

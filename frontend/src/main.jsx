@@ -35,6 +35,8 @@ import ResetTeacher from './Pages/ForgetPassword/ResetTeacher'
 import Course from './Pages/Components/Admin/Course'
 
 
+import ProtectedRoute from './Pages/Components/ProtectedRoute/ProtectedRoute'
+
 const router = createBrowserRouter(
   createRoutesFromElements(
     
@@ -56,12 +58,12 @@ const router = createBrowserRouter(
       <Route path='/admin/:data' element={<Admin/>}/>
       <Route path='/admin/course/:data' element={<Course/>}/>
       <Route path='/VarifyDoc/:type/:adminID/:ID' element={<VarifyDoc/>}/>
-      <Route path='/Student/Dashboard/:ID' element={<StudentLayout/>}>
+      <Route path='/Student/Dashboard/:ID' element={<ProtectedRoute allowedRoles={['student']}><StudentLayout/></ProtectedRoute>}>
         <Route path='/Student/Dashboard/:ID/Search' element={<SearchTeacher/>}/>
         <Route path='/Student/Dashboard/:ID/Classes' element={<StudentClasses/>}/>
         <Route path='/Student/Dashboard/:ID/Courses' element={<StudentCourses/>}/>
       </Route>
-      <Route path='/Teacher/Dashboard/:ID' element={<TeacherLayout/>}>
+      <Route path='/Teacher/Dashboard/:ID' element={<ProtectedRoute allowedRoles={['instructor']}><TeacherLayout/></ProtectedRoute>}>
         <Route path='/Teacher/Dashboard/:ID/Home' element={<DashboardTeacher/>}/>
         <Route path='/Teacher/Dashboard/:ID/Classes' element={<TeacherClasses/>}/>
         <Route path='/Teacher/Dashboard/:ID/Courses' element={<TeacherCourses/>}/>
@@ -78,10 +80,14 @@ const router = createBrowserRouter(
  )
 )
 
+import { AuthProvider } from './context/AuthContext'
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <Toaster/>
-    <RouterProvider router={router} />
+    <AuthProvider>
+      <Toaster/>
+      <RouterProvider router={router} />
+    </AuthProvider>
   </React.StrictMode>,
 )
 

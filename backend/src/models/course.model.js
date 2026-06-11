@@ -29,6 +29,18 @@ liveClasses: [{
       }
   }],
 
+  lectures: [{
+    title: {
+        type: String,
+        required: true
+    },
+    videoUrl: {
+        type: String,
+        required: true
+    },
+    description: String
+  }],
+
 enrolledteacher:{
     type:mongoose.Schema.Types.ObjectId,
     ref: "teacher",

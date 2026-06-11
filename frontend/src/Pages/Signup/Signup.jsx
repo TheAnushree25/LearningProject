@@ -4,8 +4,10 @@ import { NavLink, useNavigate } from "react-router-dom";
 import Images from "../Images/Grammar-correction.svg";
 import Radiobtn from "../Components/RadioBtn/Radiobtn";
 import Header from "../Home/Header/Header";
+import { useAuth } from "../../context/AuthContext";
 
 const Signup = () => {
+  const { signup } = useAuth();
   // State to hold user input and errors
   const [Firstname, setFirstName] = useState("");
   const [Lastname, setLastName] = useState("");
@@ -24,6 +26,12 @@ const Signup = () => {
 
     // Client-side validation
     const newErrors = {};
+
+    if (!userType) {
+      newErrors.general = "Please select whether you are registering as a Student or Teacher";
+      setErrors(newErrors);
+      return;
+    }
 
     if (!Firstname.trim()) {
       newErrors.firstname = 'First name is required';
@@ -53,15 +61,16 @@ const Signup = () => {
 
     // Prepare data object to send to the backend
     const data = {
-      Firstname: Firstname,
-      Lastname: Lastname,
-      Email: Email,
-      Password: Password,
+      firstName: Firstname,
+      lastName: Lastname,
+      email: Email,
+      password: Password,
+      role: userType === 'teacher' ? 'instructor' : 'student'
     };
 
     try {
-      // Send data to backend (you need to implement this part)
-      const response = await fetch(`/api/${userType}/signup`, {
+      // Send data to unified backend auth signup
+      const response = await fetch('/api/auth/signup', {
         method: "POST",
         mode: "cors",
         credentials: "include",
@@ -74,22 +83,15 @@ const Signup = () => {
       // Handle response
       const responseData = await response.json();
 
-      setErr(responseData.message);
-
       if (response.ok) {
-        // Registration successful, you can redirect or do something else
+        setErr('');
         console.log("Registration successful");
         navigate('/varifyEmail');
-      } else if (response.status === 400) {
-        // Handle specific validation errors returned by the server
-        setErrors(responseData.errors || {});
       } else {
-        // Other status codes (e.g., 500 Internal Server Error)
-        console.error("Registration failed with status code:", response.status);
+        setErr(responseData.message || "Registration failed");
       }
     } catch (error) {
-      setErrors(error.message);
-     
+      setErrors({ general: error.message });
     }
   };
 

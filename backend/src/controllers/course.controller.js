@@ -4,6 +4,7 @@ import {ApiError} from "../utils/ApiError.js";
 import {ApiResponse} from "../utils/ApiResponse.js";
 import { Teacher } from "../models/teacher.model.js";
 import {Sendmail} from "../utils/Nodemailer.js"
+import mongoose from "mongoose";
 
 
 const getCourse = asyncHandler(async(req,res)=>{
@@ -247,15 +248,47 @@ const enrolledcourseSTD = asyncHandler(async(req,res)=>{
     throw new ApiError(400, "params and logged student id doesnt match")
   }
 
-  const Student = await course.find({ enrolledStudent: stdID }).select( "-enrolledStudent -liveClasses -enrolledteacher")
-
-  if (!Student) {
-      throw new ApiError(404, "Student not found");
-  }
+  const studentEnrolledCourses = await course.aggregate([
+      {
+          $match: {
+              enrolledStudent: new mongoose.Types.ObjectId(stdID)
+          }
+      },
+      {
+          $lookup: {
+              from: "users",
+              localField: "enrolledteacher",
+              foreignField: "_id",
+              as: "teacherInfo"
+          }
+      },
+      {
+          $unwind: {
+              path: "$teacherInfo",
+              preserveNullAndEmptyArrays: true
+          }
+      },
+      {
+          $project: {
+              coursename: 1,
+              description: 1,
+              schedule: 1,
+              lectures: 1,
+              isapproved: 1,
+              createdAt: 1,
+              enrolledteacher: {
+                  _id: "$teacherInfo._id",
+                  Firstname: "$teacherInfo.firstName",
+                  Lastname: "$teacherInfo.lastName",
+                  Email: "$teacherInfo.email"
+              }
+          }
+      }
+  ]);
 
   return res
   .status(200)
-  .json( new ApiResponse(200,Student, "student and enrolled course"))
+  .json( new ApiResponse(200, studentEnrolledCourses, "student and enrolled courses"))
 
 })
 
@@ -271,15 +304,28 @@ const enrolledcourseTeacher = asyncHandler(async(req,res)=>{
     throw new ApiError(400, "params and logged teacher id doesnt match")
   }
 
-  const teacher = await course.find({ enrolledteacher: teacherID }).select( "-enrolledStudent -liveClasses -enrolledteacher")
-
-  if (!teacher) {
-      throw new ApiError(404, "teacher not found");
-  }
+  const teacherEnrolled = await course.aggregate([
+      {
+          $match: {
+              enrolledteacher: new mongoose.Types.ObjectId(teacherID)
+          }
+      },
+      {
+          $project: {
+              coursename: 1,
+              description: 1,
+              schedule: 1,
+              lectures: 1,
+              isapproved: 1,
+              createdAt: 1,
+              enrolledStudentsCount: { $size: { $ifNull: ["$enrolledStudent", []] } }
+          }
+      }
+  ]);
 
   return res
   .status(200)
-  .json( new ApiResponse(200,teacher, "teacher and enrolled course"))
+  .json( new ApiResponse(200, teacherEnrolled, "teacher and enrolled course"))
 })
 
 const addClass = asyncHandler(async(req,res) => {
@@ -520,9 +566,51 @@ const canStudentEnroll = asyncHandler(async(req,res)=>{
     throw new ApiError(400,"already enrolled in this course")
   }
   return res.status(200).json(new ApiResponse(200, {}, "student can enroll"))
+const courseCatalog = asyncHandler(async(req,res)=>{
+  const catalog = await course.aggregate([
+      {
+          $match: {
+              isapproved: true
+          }
+      },
+      {
+          $lookup: {
+              from: "users",
+              localField: "enrolledteacher",
+              foreignField: "_id",
+              as: "teacherDetails"
+          }
+      },
+      {
+          $unwind: {
+              path: "$teacherDetails",
+              preserveNullAndEmptyArrays: true
+          }
+      },
+      {
+          $project: {
+              coursename: 1,
+              description: 1,
+              schedule: 1,
+              lectures: 1,
+              createdAt: 1,
+              enrolledteacher: {
+                  _id: "$teacherDetails._id",
+                  Firstname: "$teacherDetails.firstName",
+                  Lastname: "$teacherDetails.lastName",
+                  Email: "$teacherDetails.email",
+                  role: "$teacherDetails.role"
+              }
+          }
+      }
+  ]);
+
+  return res
+  .status(200)
+  .json(new ApiResponse(200, catalog, "Course catalog retrieved successfully"));
 })
 
-export {getCourse, getcourseTeacher, addCourseTeacher, addCourseStudent, enrolledcourseSTD, enrolledcourseTeacher, addClass, stdEnrolledCoursesClasses, teacherEnrolledCoursesClasses, canStudentEnroll} 
+export {getCourse, getcourseTeacher, addCourseTeacher, addCourseStudent, enrolledcourseSTD, enrolledcourseTeacher, addClass, stdEnrolledCoursesClasses, teacherEnrolledCoursesClasses, canStudentEnroll, courseCatalog} 
 
 
 

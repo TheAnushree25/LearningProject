@@ -4,8 +4,10 @@ import "./Login.css";
 import { NavLink, useNavigate } from "react-router-dom";
 import Radiobtn from "../Components/RadioBtn/Radiobtn";
 import Header from "../Home/Header/Header";
+import { useAuth } from "../../context/AuthContext";
 
 export default function Login() {
+  const { setUser } = useAuth();
   // State to hold user input and errors
   const [Email, setEmail] = useState("");
   const [Password, setPassword] = useState("");
@@ -22,6 +24,12 @@ export default function Login() {
 
     // Client-side validation
     const newErrors = {};
+
+    if (!userType) {
+      newErrors.general = "Please select whether you are a Student or Teacher";
+      setErrors(newErrors);
+      return;
+    }
 
     if (!Email.trim()) {
       newErrors.email = "Email is required";
@@ -41,13 +49,13 @@ export default function Login() {
 
     // Prepare data object to send to the backend
     const data = {
-      Email: Email,
-      Password: Password,
+      email: Email,
+      password: Password,
     };
 
     try {
-      // Send data to backend (you need to implement this part)
-      const response = await fetch(`/api/${userType}/login`, {
+      // Send data to unified backend auth login
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         credentials: "include",
         headers: {
@@ -56,65 +64,50 @@ export default function Login() {
         body: JSON.stringify(data),
       });
 
-      const responesData = await response.json()
-      if(responesData.message != 'Logged in'){
-        setErr(responesData.message);
+      const responesData = await response.json();
+      if (!response.ok) {
+        setErr(responesData.message || "Login failed");
+        return;
       }
-      const userid = responesData.data.user._id
+
+      const user = responesData.data.user;
+      const expectedRole = userType === 'teacher' ? 'instructor' : 'student';
+
+      if (user.role !== expectedRole) {
+        setErr(`This account is registered as a ${user.role === 'instructor' ? 'teacher' : 'student'}, not a ${userType}.`);
+        return;
+      }
+
+      setUser(user);
+      const userid = user._id;
  
       // Handle response
-      if (response.ok) {
-        // Authentication successful, you can redirect or do something else
-        console.log("Login successful");
-        console.log(responesData.data.user.Isapproved);
-        
-        
-        if(responesData.data.user.Isapproved === "pending"){
-          if(responesData.data.user.Teacherdetails || responesData.data.user.Studentdetails){
-            navigate('/pending')
-          }else{
-            if(userType === 'student'){
-              navigate(`/StudentDocument/${userid}`)
-            }else if(userType === 'teacher'){
-              navigate(`/TeacherDocument/${userid}`)
-            }
-          }
-        }else if(responesData.data.user.Isapproved === "approved"){
-          if(userType === 'student'){
-            navigate(`/Student/Dashboard/${userid}/Search`)
-          }else if(userType === 'teacher'){
-            navigate(`/Teacher/Dashboard/${userid}/Home`)
-          }
-        }else if(responesData.data.user.Isapproved === "reupload"){
-          if(userType === 'teacher'){
-            navigate(`/rejected/${userType}/${userid}`)
-          }else{
-            navigate(`/rejected/${userType}/${userid}`)
-          }
+      console.log("Login successful");
+      console.log(user.Isapproved);
+      
+      if(user.Isapproved === "pending"){
+        if(user.Teacherdetails || user.Studentdetails){
+          navigate('/pending')
         }else{
-          setErr('You are ban from our platform!');
+          if(userType === 'student'){
+            navigate(`/StudentDocument/${userid}`)
+          }else if(userType === 'teacher'){
+            navigate(`/TeacherDocument/${userid}`)
+          }
         }
-
-      } else if (response.status === 401) {
-        // Incorrect password
-        setErrors({ password: responesData.message || "Incorrect password" });
-      } else if (response.status === 403) {
-        // Account locked, disabled, or other authentication issues
-
-        setErrors({ general: responesData.message || "Login failed" });
-      } else if (response.status === 400) {
-        setErrors({ general: responesData.message || "User does not exist" });
-      } else if (response.status === 422) {
-        setErrors({
-          general: responesData.message || '"Email" must be a valid email',
-        });
-      } else {
-        // Other unexpected errors
-        setErrors({ general: "An unexpected error occurred" });
+      }else if(user.Isapproved === "approved"){
+        if(userType === 'student'){
+          navigate(`/Student/Dashboard/${userid}/Search`)
+        }else if(userType === 'teacher'){
+          navigate(`/Teacher/Dashboard/${userid}/Home`)
+        }
+      }else if(user.Isapproved === "reupload"){
+        navigate(`/rejected/${userType}/${userid}`)
+      }else{
+        setErr('You are banned from our platform!');
       }
     } catch (error) {
-   
-      setErrors(error.message);
+      setErrors({ general: error.message });
     }
   };
 

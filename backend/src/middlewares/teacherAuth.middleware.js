@@ -15,8 +15,8 @@ const authTeacher = asyncHandler(async(req,_,next)=>{
 
     const teacher = await Teacher.findById(decodedAccToken?._id).select("-Password -Refreshtoken")
 
-    if(!teacher){
-        throw new ApiError(401, "invalid access token")
+    if(!teacher || teacher.role !== 'instructor'){
+        throw new ApiError(401, "invalid access token or unauthorized role")
     }
 
 

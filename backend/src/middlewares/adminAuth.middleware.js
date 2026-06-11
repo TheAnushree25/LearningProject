@@ -17,8 +17,8 @@ const authAdmin = asyncHandler(async(req,_,next) =>{
 
     const Admin = await admin.findById(decodedAccToken?._id).select("-password -Refreshtoken")
 
-    if(!Admin){
-        throw new ApiError(401, "invalid access token")
+    if(!Admin || Admin.role !== 'admin'){
+        throw new ApiError(401, "invalid access token or unauthorized role")
     }
 
     req.Admin = Admin

@@ -18,6 +18,22 @@ export const instance = new Razorpay({
     key_secret: process.env.KEY_SECRET
 })
 
+// auth routes
+import authRouter from "./routes/auth.routes.js";
+app.use("/api/auth", authRouter);
+
+// contact routes
+import contactRouter from "./routes/contact.routes.js";
+app.use("/api/contact", contactRouter);
+
+// progress routes
+import progressRouter from "./routes/progress.routes.js";
+app.use("/api/progress", progressRouter);
+
+// dashboard routes
+import dashboardRouter from "./routes/dashboard.routes.js";
+app.use("/api/dashboard", dashboardRouter);
+
 //student routes
 import studentRouter from "./routes/student.routes.js";
 app.use("/api/student", studentRouter)

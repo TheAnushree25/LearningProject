@@ -1,5 +1,6 @@
 import {Router} from "express";
-import {signup, mailVerified, login,logout, addStudentDetails, getStudent, forgetPassword, resetPassword } from "../controllers/student.controller.js";
+import { mailVerified, logout, addStudentDetails, getStudent, forgetPassword, resetPassword } from "../controllers/student.controller.js";
+import { signup, login } from "../controllers/auth.controller.js";
 import {upload} from "../middlewares/multer.middleware.js"
 import {authSTD} from "../middlewares/stdAuth.middleware.js"
 import { authSchema } from "../middlewares/joiLogin.middleware.js";

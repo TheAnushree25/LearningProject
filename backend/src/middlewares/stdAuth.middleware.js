@@ -16,8 +16,8 @@ const authSTD = asyncHandler(async(req,_,next) =>{
 
     const Student = await student.findById(decodedAccToken?._id).select("-Password -Refreshtoken")
 
-    if(!Student){
-        throw new ApiError(401, "invalid access token")
+    if(!Student || Student.role !== 'student'){
+        throw new ApiError(401, "invalid access token or unauthorized role")
     }
 
     req.Student = Student
