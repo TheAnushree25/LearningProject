@@ -1,9 +1,8 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { contact } from "../models/contact.model.js";
 import { Sendmail } from "../utils/Nodemailer.js";
-import { ID } from "node-appwrite";
-import { databases, databaseId, contactsColId } from "../database/appwrite.js";
 
 export const handleContactSubmit = asyncHandler(async (req, res) => {
     const { name, email, message } = req.body;
@@ -12,23 +11,13 @@ export const handleContactSubmit = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Name, email and message are required fields");
     }
 
-    let newContact;
-    if (global.isAppwriteConnected) {
-        newContact = await databases.createDocument(databaseId, contactsColId, ID.unique(), {
-            name,
-            email,
-            message,
-            status: false
-        });
-    } else {
-        newContact = {
-            _id: "mock_contact_" + Math.random().toString(36).substr(2, 9),
-            name,
-            email,
-            message,
-            status: false
-        };
-    }
+    // Save inquiry to the Contact collection
+    const newContact = await contact.create({
+        name,
+        email,
+        message,
+        status: false
+    });
 
     if (!newContact) {
         throw new ApiError(500, "Failed to submit your inquiry. Please try again.");

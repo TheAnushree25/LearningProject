@@ -8,8 +8,27 @@ dotenv.config({ path: './.env' });
 
 const seed = async () => {
     try {
-        console.log("Connecting to MongoDB at:", process.env.MONGODB_URL);
-        await mongoose.connect(`${process.env.MONGODB_URL}/eLearning`);
+        const connUrl = process.env.MONGODB_URL || "mongodb+srv://ElearningProject:JGqPVGjdDW6k2VS2@mydatabase.uc73haq.mongodb.net/?appName=MyDatabase";
+        console.log("Connecting to MongoDB at:", connUrl);
+        
+        let fullUrl = connUrl;
+        if (!fullUrl.includes("/eLearning")) {
+            if (fullUrl.includes("?")) {
+                const parts = fullUrl.split("?");
+                if (parts[0].endsWith("/")) {
+                    fullUrl = `${parts[0]}eLearning?${parts[1]}`;
+                } else {
+                    fullUrl = `${parts[0]}/eLearning?${parts[1]}`;
+                }
+            } else {
+                if (fullUrl.endsWith("/")) {
+                    fullUrl = `${fullUrl}eLearning`;
+                } else {
+                    fullUrl = `${fullUrl}/eLearning`;
+                }
+            }
+        }
+        await mongoose.connect(fullUrl);
         console.log("Connected to MongoDB successfully!");
 
         // Clean database or insert if missing

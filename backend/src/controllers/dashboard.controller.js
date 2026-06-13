@@ -1,12 +1,15 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { Query } from "node-appwrite";
-import { databases, databaseId, usersColId, coursesColId, progressColId, contactsColId } from "../database/appwrite.js";
+import { User } from "../models/user.model.js";
+import { course } from "../models/course.model.js";
+import { contact } from "../models/contact.model.js";
+import { CourseProgress } from "../models/courseProgress.model.js";
+import mongoose from "mongoose";
 
 export const getStudentStats = asyncHandler(async (req, res) => {
     const { studentId } = req.params;
 
-    if (!global.isAppwriteConnected) {
+    if (!global.isMongoConnected) {
         // Return mock student statistics
         return res.status(200).json(
             new ApiResponse(200, {
@@ -17,46 +20,30 @@ export const getStudentStats = asyncHandler(async (req, res) => {
         );
     }
 
-    // Enrolled courses list
-    const enrolledCoursesList = await databases.listDocuments(databaseId, coursesColId, [
-        Query.contains('enrolledStudent', studentId)
+    const stdId = new mongoose.Types.ObjectId(studentId);
+
+    const enrolledCoursesCount = await course.aggregate([
+        { $match: { enrolledStudent: stdId } },
+        { $count: "count" }
     ]);
 
-    const enrolledCourses = enrolledCoursesList.total;
-
-    // Upcoming classes
-    let upcomingClasses = 0;
-    const now = new Date();
-    for (const doc of enrolledCoursesList.documents) {
-        let liveClasses = [];
-        try {
-            liveClasses = doc.liveClasses ? (typeof doc.liveClasses === 'string' ? JSON.parse(doc.liveClasses) : doc.liveClasses) : [];
-        } catch (e) { console.error(e); }
-
-        for (const lc of liveClasses) {
-            if (new Date(lc.date) >= now) {
-                upcomingClasses++;
-            }
-        }
-    }
-
-    // Total Watch Duration
-    const progressList = await databases.listDocuments(databaseId, progressColId, [
-        Query.equal('userId', studentId)
+    const upcomingClasses = await course.aggregate([
+        { $match: { enrolledStudent: stdId } },
+        { $unwind: "$liveClasses" },
+        { $match: { "liveClasses.date": { $gte: new Date() } } },
+        { $count: "count" }
     ]);
 
-    let totalSeconds = 0;
-    for (const doc of progressList.documents) {
-        totalSeconds += doc.lastWatchedTimestamp || 0;
-    }
-
-    const totalHoursWatched = Math.round((totalSeconds / 3600) * 10) / 10;
+    const totalWatchSeconds = await CourseProgress.aggregate([
+        { $match: { userId: stdId } },
+        { $group: { _id: null, totalSeconds: { $sum: "$lastWatchedTimestamp" } } }
+    ]);
 
     return res.status(200).json(
         new ApiResponse(200, {
-            enrolledCourses,
-            upcomingClasses,
-            totalHoursWatched
+            enrolledCourses: enrolledCoursesCount[0]?.count || 0,
+            upcomingClasses: upcomingClasses[0]?.count || 0,
+            totalHoursWatched: Math.round(((totalWatchSeconds[0]?.totalSeconds || 0) / 3600) * 10) / 10
         }, "Student stats generated successfully")
     );
 });
@@ -64,7 +51,7 @@ export const getStudentStats = asyncHandler(async (req, res) => {
 export const getTeacherStats = asyncHandler(async (req, res) => {
     const { teacherId } = req.params;
 
-    if (!global.isAppwriteConnected) {
+    if (!global.isMongoConnected) {
         // Return mock instructor statistics
         return res.status(200).json(
             new ApiResponse(200, {
@@ -76,47 +63,57 @@ export const getTeacherStats = asyncHandler(async (req, res) => {
         );
     }
 
-    // Teacher's courses
-    const teacherCourses = await databases.listDocuments(databaseId, coursesColId, [
-        Query.equal('enrolledteacher', teacherId)
+    const tId = new mongoose.Types.ObjectId(teacherId);
+
+    const stats = await course.aggregate([
+        { $match: { enrolledteacher: tId } },
+        {
+            $group: {
+                _id: "$enrolledteacher",
+                totalCourses: { $sum: 1 },
+                allStudents: { $push: "$enrolledStudent" }
+            }
+        },
+        {
+            $project: {
+                totalCourses: 1,
+                totalStudents: {
+                    $size: {
+                        $reduce: {
+                            input: "$allStudents",
+                            initialValue: [],
+                            in: { $setUnion: ["$$value", "$$this"] }
+                        }
+                    }
+                }
+            }
+        }
     ]);
 
-    const totalCourses = teacherCourses.total;
-
-    // Unique enrolled students count
-    const studentSet = new Set();
-    for (const doc of teacherCourses.documents) {
-        const students = doc.enrolledStudent || [];
-        students.forEach(id => studentSet.add(id));
-    }
-    const totalStudents = studentSet.size;
-
-    // Teacher financials
-    const teacherDoc = await databases.getDocument(databaseId, usersColId, teacherId);
-    const balance = teacherDoc.Balance || teacherDoc.balance || 0;
-
-    let totalWithdrawals = 0;
-    let withdrawalHistory = [];
-    try {
-        withdrawalHistory = teacherDoc.WithdrawalHistory ? (typeof teacherDoc.WithdrawalHistory === 'string' ? JSON.parse(teacherDoc.WithdrawalHistory) : teacherDoc.WithdrawalHistory) : [];
-    } catch (e) { console.error(e); }
-
-    for (const w of withdrawalHistory) {
-        totalWithdrawals += w.amount || 0;
-    }
+    const teacherFinancials = await User.aggregate([
+        { $match: { _id: tId, role: "instructor" } },
+        {
+            $project: {
+                balance: { $ifNull: ["$Balance", 0] },
+                totalWithdrawals: {
+                    $sum: { $ifNull: ["$WithdrawalHistory.amount", 0] }
+                }
+            }
+        }
+    ]);
 
     return res.status(200).json(
         new ApiResponse(200, {
-            totalCourses,
-            totalStudents,
-            balance,
-            totalWithdrawals
+            totalCourses: stats[0]?.totalCourses || 0,
+            totalStudents: stats[0]?.totalStudents || 0,
+            balance: teacherFinancials[0]?.balance || 0,
+            totalWithdrawals: teacherFinancials[0]?.totalWithdrawals || 0
         }, "Teacher stats generated successfully")
     );
 });
 
 export const getAdminStats = asyncHandler(async (req, res) => {
-    if (!global.isAppwriteConnected) {
+    if (!global.isMongoConnected) {
         // Return mock admin statistics
         return res.status(200).json(
             new ApiResponse(200, {
@@ -130,50 +127,38 @@ export const getAdminStats = asyncHandler(async (req, res) => {
         );
     }
 
-    // User counts
-    const usersList = await databases.listDocuments(databaseId, usersColId, [
-        Query.limit(100)
+    const userRoleCounts = await User.aggregate([
+        { $group: { _id: "$role", count: { $sum: 1 } } }
     ]);
 
-    let studentsCount = 0;
-    let instructorsCount = 0;
-    let adminsCount = 0;
+    const rolesMap = {};
+    userRoleCounts.forEach(item => {
+        rolesMap[item._id] = item.count;
+    });
 
-    for (const user of usersList.documents) {
-        if (user.role === 'student') studentsCount++;
-        else if (user.role === 'instructor') instructorsCount++;
-        else if (user.role === 'admin') adminsCount++;
-    }
-
-    // Courses counts
-    const coursesList = await databases.listDocuments(databaseId, coursesColId, [
-        Query.limit(100)
+    const courseStats = await course.aggregate([
+        { $group: { _id: "$isapproved", count: { $sum: 1 } } }
     ]);
 
-    let approvedCourses = 0;
-    let pendingCourses = 0;
+    const coursesMap = { approved: 0, pending: 0 };
+    courseStats.forEach(item => {
+        if (item._id === true) coursesMap.approved = item.count;
+        if (item._id === false) coursesMap.pending = item.count;
+    });
 
-    for (const course of coursesList.documents) {
-        if (course.isapproved === true) approvedCourses++;
-        else if (course.isapproved === false) pendingCourses++;
-    }
-
-    // Contacts counts
-    const contactList = await databases.listDocuments(databaseId, contactsColId, [
-        Query.equal('status', false),
-        Query.limit(100)
+    const pendingInquiries = await contact.aggregate([
+        { $match: { status: false } },
+        { $count: "count" }
     ]);
-
-    const pendingInquiries = contactList.total;
 
     return res.status(200).json(
         new ApiResponse(200, {
-            studentsCount,
-            instructorsCount,
-            adminsCount,
-            approvedCourses,
-            pendingCourses,
-            pendingInquiries
+            studentsCount: rolesMap['student'] || 0,
+            instructorsCount: rolesMap['instructor'] || 0,
+            adminsCount: rolesMap['admin'] || 0,
+            approvedCourses: coursesMap.approved,
+            pendingCourses: coursesMap.pending,
+            pendingInquiries: pendingInquiries[0]?.count || 0
         }, "Admin stats generated successfully")
     );
 });

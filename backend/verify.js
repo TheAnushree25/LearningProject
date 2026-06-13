@@ -1,46 +1,90 @@
 import dotenv from "dotenv";
-import { Client, Databases } from "node-appwrite";
+import mongoose from "mongoose";
+import { User } from "./src/models/user.model.js";
+import { course } from "./src/models/course.model.js";
+import { contact } from "./src/models/contact.model.js";
+import { CourseProgress } from "./src/models/courseProgress.model.js";
 
 dotenv.config({ path: './.env' });
 
-const verifyAppwrite = async () => {
-    const endpoint = process.env.APPWRITE_ENDPOINT;
-    const projectId = process.env.APPWRITE_PROJECT_ID;
-    const apiKey = process.env.APPWRITE_API_KEY;
-    const dbId = process.env.APPWRITE_DATABASE_ID || "eLearningDB";
-    const usersColId = process.env.APPWRITE_USERS_COL_ID || "users";
-    const coursesColId = process.env.APPWRITE_COURSES_COL_ID || "courses";
-
-    if (!endpoint || !projectId || !apiKey) {
-        console.log("ℹ️ Appwrite credentials are not configured in .env file.");
-        console.log("ℹ️ Verification completed in Database-Disconnected Mock Mode.");
-        console.log("✅ Offline system checks passed successfully!");
-        process.exit(0);
-    }
-
+const verify = async () => {
     try {
-        console.log("Connecting to Appwrite API Endpoint:", endpoint);
-        const client = new Client()
-            .setEndpoint(endpoint)
-            .setProject(projectId)
-            .setKey(apiKey);
-
-        const databases = new Databases(client);
-
-        console.log("Verifying Database ID:", dbId);
+        console.log("Connecting to database...");
+        const connUrl = process.env.MONGODB_URL || "mongodb+srv://ElearningProject:JGqPVGjdDW6k2VS2@mydatabase.uc73haq.mongodb.net/?appName=MyDatabase";
         
-        const usersList = await databases.listDocuments(dbId, usersColId);
-        console.log(`- Verified Users Collection: Found ${usersList.total} users.`);
+        let fullUrl = connUrl;
+        if (!fullUrl.includes("/eLearning")) {
+            if (fullUrl.includes("?")) {
+                const parts = fullUrl.split("?");
+                if (parts[0].endsWith("/")) {
+                    fullUrl = `${parts[0]}eLearning?${parts[1]}`;
+                } else {
+                    fullUrl = `${parts[0]}/eLearning?${parts[1]}`;
+                }
+            } else {
+                if (fullUrl.endsWith("/")) {
+                    fullUrl = `${fullUrl}eLearning`;
+                } else {
+                    fullUrl = `${fullUrl}/eLearning`;
+                }
+            }
+        }
+        await mongoose.connect(fullUrl);
+        console.log("Database connected successfully!");
 
-        const coursesList = await databases.listDocuments(dbId, coursesColId);
-        console.log(`- Verified Courses Collection: Found ${coursesList.total} courses.`);
+        // 1. Verify users
+        const usersCount = await User.countDocuments();
+        console.log(`- Verified User Model: Found ${usersCount} users.`);
 
-        console.log("\n✅ ALL APPWRITE SYSTEM CHECKS PASSED SUCCESSFULLY!");
+        const student = await User.findOne({ role: "student" });
+        const teacher = await User.findOne({ role: "instructor" });
+        console.log(`  - Student: ${student ? student.email : 'None found'}`);
+        console.log(`  - Teacher: ${teacher ? teacher.email : 'None found'}`);
+
+        // 2. Verify courses
+        const coursesCount = await course.countDocuments();
+        console.log(`- Verified Course Model: Found ${coursesCount} courses.`);
+
+        // 3. Test Course Catalog Aggregation Pipeline
+        console.log("- Testing Course Catalog Aggregation...");
+        const catalog = await course.aggregate([
+            { $match: { isapproved: true } },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "enrolledteacher",
+                    foreignField: "_id",
+                    as: "teacherDetails"
+                }
+            },
+            { $unwind: "$teacherDetails" },
+            {
+                $project: {
+                    coursename: 1,
+                    description: 1,
+                    teacherName: "$teacherDetails.firstName"
+                }
+            }
+        ]);
+        console.log("  - Catalog Aggregation Success! Found:", catalog.length, "items.");
+
+        // 4. Test Student Stats Aggregation Pipeline
+        if (student) {
+            console.log("- Testing Student Stats Aggregation...");
+            const enrolledCoursesCount = await course.aggregate([
+                { $match: { enrolledStudent: student._id } },
+                { $count: "count" }
+            ]);
+            console.log("  - Student Stats Aggregation Success! Enrolled courses count:", enrolledCoursesCount[0]?.count || 0);
+        }
+
+        console.log("\n✅ ALL SYSTEM CHECKS PASSED SUCCESSFULLY!");
+        await mongoose.disconnect();
         process.exit(0);
     } catch (error) {
-        console.error("❌ Appwrite Verification failed:", error.message);
+        console.error("❌ Verification failed:", error);
         process.exit(1);
     }
 };
 
-verifyAppwrite();
+verify();

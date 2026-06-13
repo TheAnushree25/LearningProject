@@ -1,7 +1,7 @@
 import {asyncHandler} from "../utils/asyncHandler.js";
 import {ApiError} from "../utils/ApiError.js";
+import { admin } from "../models/admin.model.js";
 import jwt from "jsonwebtoken";
-import { databases, databaseId, usersColId } from "../database/appwrite.js";
 
 const authAdmin = asyncHandler(async(req,_,next) =>{
 
@@ -15,12 +15,8 @@ const authAdmin = asyncHandler(async(req,_,next) =>{
         process.env.ACCESS_TOKEN_SECRET || "default_access_token_secret_key_1234")
 
     let Admin;
-    if (global.isAppwriteConnected) {
-        try {
-            Admin = await databases.getDocument(databaseId, usersColId, decodedAccToken?._id);
-        } catch (error) {
-            throw new ApiError(401, "invalid access token or user not found in Appwrite");
-        }
+    if (global.isMongoConnected) {
+        Admin = await admin.findById(decodedAccToken?._id).select("-password -Refreshtoken")
     } else {
         Admin = {
             _id: decodedAccToken?._id || "660c6d2d46e01a4e14f8ab33",
