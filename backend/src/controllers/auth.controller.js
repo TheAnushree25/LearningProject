@@ -145,7 +145,7 @@ export const signup = asyncHandler(async (req, res) => {
         email: normalizedEmail,
         password: pWord,
         role: dbRole,
-        Isverified: false,
+        Isverified: true,
         Isapproved: dbRole === 'admin' ? 'approved' : 'pending'
     });
 
