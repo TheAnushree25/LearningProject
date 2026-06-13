@@ -257,82 +257,80 @@ function Popup({ onClose, subject }) {
   };
 
   return (
-    <div className='fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex justify-center'>
-      <div className='bg-[#008280] w-[30rem] h-fit py-4 mt-1 rounded-md'>
+    <div className='fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto'>
+      <div className='bg-[#008280] w-full max-w-[30rem] h-auto max-h-[90vh] overflow-y-auto py-6 rounded-md relative text-white px-4 md:px-8'>
         <div
-          className='absolute w-9 h-9 bg-white rounded-xl cursor-pointer flex items-center justify-center m-2'
+          className='absolute top-3 left-3 w-9 h-9 bg-white text-black rounded-xl cursor-pointer flex items-center justify-center font-bold'
           onClick={onClose}
         >
           ✖️
         </div>
-        <div className='text-center my-10 text-white text-3xl font-semibold'>
+        <div className='text-center my-6 text-white text-3xl font-semibold'>
           <p>{subject}</p>
         </div>
-        <div className='m-5 flex flex-col gap-4 text-white text-xl'>
-          <div>
-            <label htmlFor=''>Coursename: </label>
+        <div className='flex flex-col gap-4 text-white text-base md:text-lg'>
+          <div className='flex items-center gap-3 justify-between flex-wrap'>
+            <label className='font-semibold'>Coursename: </label>
             <input
               type='text'
-              className='bg-[#32B0AE] p-2 rounded-md w-52 border-0 outline-0'
+              className='bg-[#32B0AE] p-2 rounded-md w-52 border-0 outline-0 text-white font-medium'
               value={subject}
               readOnly
             />
           </div>
 
-          <label>Timing: </label>
-          {Object.keys(day).map((d) => (
-            <div
-              key={d}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px',
-              }}
-            >
-              <input
-                type='checkbox'
-                checked={day[d]}
-                onChange={() => handleCheckboxChange(d)}
-              />
-              <label>{d.charAt(0).toUpperCase() + d.slice(1)}</label>
-              <input
-                className='w-[7rem] rounded-sm text-black placeholder:text-gray pl-2'
-                type='time'
-                placeholder='Start Time'
-                value={dayValue[d]}
-                onChange={(e) =>
-                  setDayValue({ ...dayValue, [d]: e.target.value })
-                }
-              />
-              <input
-                className='w-[7rem] rounded-sm text-black placeholder:text-gray pl-2'
-                type='time'
-                readOnly
-                placeholder='End Time'
-                value={dayValue[d] ? convertMinutesToTime(convertTimeToMinutes(dayValue[d]) + dateGap * 60) : ''}
-              />
-            </div>
-          ))}
+          <div className='flex flex-col gap-2'>
+            <label className='font-semibold border-b border-[#32B0AE] pb-1'>Timing: </label>
+            {Object.keys(day).map((d) => (
+              <div
+                key={d}
+                className='flex flex-wrap items-center justify-start gap-2 py-1 border-b border-[#32B0AE] border-opacity-30'
+              >
+                <input
+                  type='checkbox'
+                  className='w-5 h-5 cursor-pointer'
+                  checked={day[d]}
+                  onChange={() => handleCheckboxChange(d)}
+                />
+                <label className='w-10 text-sm font-semibold'>{d.charAt(0).toUpperCase() + d.slice(1)}</label>
+                <input
+                  className='w-[6.5rem] rounded-sm text-black placeholder:text-gray-400 pl-2 text-sm p-1'
+                  type='time'
+                  placeholder='Start Time'
+                  value={dayValue[d]}
+                  onChange={(e) =>
+                    setDayValue({ ...dayValue, [d]: e.target.value })
+                  }
+                />
+                <input
+                  className='w-[6.5rem] rounded-sm text-black placeholder:text-gray-400 pl-2 text-sm p-1 bg-gray-200'
+                  type='time'
+                  readOnly
+                  placeholder='End Time'
+                  value={dayValue[d] ? convertMinutesToTime(convertTimeToMinutes(dayValue[d]) + dateGap * 60) : ''}
+                />
+              </div>
+            ))}
+          </div>
 
-          <div>
-            <label htmlFor=''>Description: </label>
+          <div className='flex items-center gap-3 justify-between flex-wrap mt-2'>
+            <label className='font-semibold'>Description: </label>
             <input
               type='text'
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
-              className='bg-[#32B0AE] p-2 rounded-md w-52 ml-3 border-0 outline-0'
+              className='bg-[#32B0AE] p-2 rounded-md w-52 border-0 outline-0 text-white font-medium'
             />
           </div>
         </div>
 
-        <div className='flex items-center justify-center mt-7'>
-          <span
+        <div className='flex items-center justify-center mt-8'>
+          <button
             onClick={addCourse}
-            className='bg-[#335699] text-white px-10 py-3 rounded-md text-xl cursor-pointer'
+            className='bg-[#335699] text-white px-10 py-3 rounded-md text-lg cursor-pointer font-semibold hover:bg-blue-800 transition'
           >
             Create Course
-          </span>
+          </button>
         </div>
       </div>
     </div>

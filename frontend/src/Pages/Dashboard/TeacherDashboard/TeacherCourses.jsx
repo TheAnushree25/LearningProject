@@ -12,7 +12,7 @@ function TeacherCourses() {
 
   return (
     <>
-      <div className='flex gap-10 pl-48 mx-48 mt-11 flex-wrap justify-center'>
+      <div className='flex gap-10 pl-4 md:pl-60 pr-4 mt-11 flex-wrap justify-center'>
           <div className="subject cursor-pointer" onClick={()=>crreateCourse("Physics")}>
             <img src="https://www.figma.com/file/6b4R8evBkii6mI53IA4vSS/image/8e9bf690d23d886f63466a814cfbec78187f91d2" alt="Physics" />
             <p>Physics</p>

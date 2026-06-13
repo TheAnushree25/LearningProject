@@ -213,66 +213,72 @@ function Search() {
           Find Teacher
         </button>
       </div>
-      <div className="overflow-auto">
+      <div className="overflow-auto w-full">
         {course &&
           course.map((Data) => (
             <div
               key={Data._id}
-              className="relative bg-blue-600 p-4 gap-6 mb-3 flex  rounded-sm max-w-4xl h-20 items-start"
+              className="relative bg-blue-600 p-4 mb-4 flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-md max-w-4xl w-full text-white"
             >
-              <div className="h-fit font-bold text-blue-900">
-                {Data.coursename.toUpperCase()}
-              </div>
-              <div onClick={()=>openTeacherDec(Data.enrolledteacher.Teacherdetails, Data.enrolledteacher.Firstname, Data.enrolledteacher.Lastname, Data.coursename)} className="text-gray-300 cursor-pointer font-bold">
-                {Data.enrolledteacher.Firstname} {Data.enrolledteacher.Lastname}
-              </div>
-              <div className="text-gray-900">
-                <span className="text-black">Desc :</span> {Data.description}
-              </div>
-              <div>{Data.enrolledStudent.length}/20</div>
-              { idArray.includes(Data._id) ? (
-                <div onClick={()=> alert("You Already enrolled, pls find other course")}
-                  className="text-white bg-green-900 py-2 px-3 absolute right-4 cursor-not-allowed">
-                  Already Enrolled
+              <div className="flex flex-col gap-2 flex-1">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="font-bold text-blue-900 text-lg">
+                    {Data.coursename.toUpperCase()}
+                  </div>
+                  <div onClick={()=>openTeacherDec(Data.enrolledteacher.Teacherdetails, Data.enrolledteacher.Firstname, Data.enrolledteacher.Lastname, Data.coursename)} className="text-gray-300 cursor-pointer font-bold hover:underline">
+                    {Data.enrolledteacher.Firstname} {Data.enrolledteacher.Lastname}
+                  </div>
+                  <div className="text-xs bg-blue-700 px-2 py-0.5 rounded-full">
+                    Enrolled: {Data.enrolledStudent.length}/20
+                  </div>
                 </div>
-              ) : Data.enrolledStudent.length < 20 ? (
-                <div
-                  onClick={() => handleEnroll(Data.coursename, Data._id)}
-                  className="text-white bg-blue-900 py-2 px-3 absolute right-4 cursor-pointer"
-                >
-                  Enroll Now
+                <div className="text-gray-100 text-sm">
+                  <span className="font-semibold text-black">Desc:</span> {Data.description}
                 </div>
-              ) : (
-                <div onClick={()=> alert("Already Full, pls find other course")}
-                  className="text-white bg-red-900 py-2 px-3 absolute right-4 cursor-not-allowed">
-                  Already Full
+                <div className="text-xs text-gray-200">
+                  <span className='font-bold text-black'>Timing: </span>
+                  {'[ '}
+                  {Data.schedule.map(daytime => {
+                    return `${daysName[daytime.day]} ${Math.floor(daytime.starttime / 60)}:${daytime.starttime % 60 === 0 ? "00" : daytime.starttime % 60} - ${Math.floor(daytime.endtime/60)}:${daytime.endtime % 60 === 0 ? "00" : daytime.endtime % 60}`;
+                  }).join(', ')}
+                  {' ]'}
                 </div>
-              )}
-              <div className="absolute bottom-2">
-                <span className='mt-2 font-bold'>Timing : </span>
-                {'[ '}
-                {Data.schedule.map(daytime => {
-                  return `${daysName[daytime.day]} ${Math.floor(daytime.starttime / 60)}:${daytime.starttime % 60 === 0 ? "00" : daytime.starttime % 60} - ${Math.floor(daytime.endtime/60)}:${daytime.endtime % 60 === 0 ? "00" : daytime.endtime % 60}`;
-                }).join(', ')}
-                {' ]'}
+              </div>
+              
+              <div className="self-end md:self-center mt-2 md:mt-0">
+                { idArray.includes(Data._id) ? (
+                  <button onClick={()=> alert("You Already enrolled, pls find other course")}
+                    className="text-white bg-green-900 hover:bg-green-800 py-2 px-4 rounded text-sm cursor-not-allowed whitespace-nowrap">
+                    Already Enrolled
+                  </button>
+                ) : Data.enrolledStudent.length < 20 ? (
+                  <button
+                    onClick={() => handleEnroll(Data.coursename, Data._id)}
+                    className="text-white bg-blue-900 hover:bg-blue-800 py-2 px-4 rounded text-sm cursor-pointer whitespace-nowrap"
+                  >
+                    Enroll Now
+                  </button>
+                ) : (
+                  <button onClick={()=> alert("Already Full, pls find other course")}
+                    className="text-white bg-red-900 hover:bg-red-800 py-2 px-4 rounded text-sm cursor-not-allowed whitespace-nowrap">
+                    Already Full
+                  </button>
+                )}
               </div>
             </div>
           ))}
       </div>
 
       {openTM && (
-          <div key='1' className='fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-center justify-center'>
-              <div className='bg-[#008280] w-96 h-[21rem] rounded-md'>
-                  <div className=' absolute w-9 h-9 bg-white rounded-xl cursor-pointer flex items-center justify-center m-2' onClick={()=>setOpenTM(false)}>✖️</div>
-                  <div className='flex flex-col justify-center p-5 text-1xl gap-4'>
-                  <p className='text-center text-2xl bg-blue-900 rounded-sm py-1 text-white mb-5'>{tname.sub.toUpperCase()}</p>
-                  <p>Teacher Name : <span className='text-white'>{tname.fname} {tname.lname}</span></p>
-                  {/* <p>Teacher Name : <span className='text-white'>{tname.fname} {tname.lname}</span> ⭐⭐⭐</p> */}
-                  <p>Education : <span className='text-white'>Postgraduate from <b className='text-gray-200'>{Tdec.PGcollege}</b> with {Tdec.PGmarks} CGPA</span></p>
-                  <p>Experience : <span className='text-white'>{Tdec.Experience} years</span></p>
-                  <p>Course : <span className='text-white'>{tname.sub.toUpperCase()}</span></p>
-                  {/* <p>Course Duration : <span className='text-white'>6 Months</span></p> */}
-                  {/* <p>Fees : <span className='text-white'>Rs. {price[tname.sub]}</span></p> */}
+          <div key='1' className='fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-center justify-center p-4 z-50'>
+              <div className='bg-[#008280] w-full max-w-sm h-auto rounded-md relative text-white p-6'>
+                  <div className='absolute top-3 left-3 w-9 h-9 bg-white text-black rounded-xl cursor-pointer flex items-center justify-center' onClick={()=>setOpenTM(false)}>✖️</div>
+                  <div className='flex flex-col justify-center mt-8 text-sm gap-3'>
+                    <p className='text-center text-xl bg-blue-900 rounded-sm py-1 text-white mb-3 font-semibold'>{tname.sub.toUpperCase()}</p>
+                    <p className="font-semibold text-gray-900">Teacher Name : <span className='text-white font-normal'>{tname.fname} {tname.lname}</span></p>
+                    <p className="font-semibold text-gray-900">Education : <span className='text-white font-normal'>Postgraduate from <b className='text-gray-200'>{Tdec.PGcollege}</b> with {Tdec.PGmarks} CGPA</span></p>
+                    <p className="font-semibold text-gray-900">Experience : <span className='text-white font-normal'>{Tdec.Experience} years</span></p>
+                    <p className="font-semibold text-gray-900">Course : <span className='text-white font-normal'>{tname.sub.toUpperCase()}</span></p>
                   </div>
               </div>
           </div>

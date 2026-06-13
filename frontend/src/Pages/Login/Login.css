@@ -88,6 +88,23 @@
   color: #fff; 
 }
 
+@media (max-w: 768px) {
+  .main {
+    flex-direction: column;
+    margin-left: 0;
+    margin-top: 5vh;
+    padding: 1rem;
+    gap: 2rem;
+  }
+  .main img {
+    display: none;
+  }
+  .container {
+    width: 100%;
+    max-width: 380px;
+  }
+}
+
 /* .signup-link .link{
   color: green;
   font-size: medium;

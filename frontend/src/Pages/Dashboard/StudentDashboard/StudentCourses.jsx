@@ -62,7 +62,7 @@ function StudentCourses() {
 
   return (
     <>
-    <div className='flex gap-10 pl-[12rem] mt-12 flex-wrap justify-center mb-2'>
+    <div className='flex gap-10 pl-4 md:pl-60 pr-4 mt-12 flex-wrap justify-center mb-2'>
         {data.map(sub => (
           <div key={sub._id} className="text-white rounded-md bg-[#042439] cursor-pointer text-center p-3 w-[15rem]" onClick={()=>openpopup(sub)}>
             <div className='flex justify-center items-center'>

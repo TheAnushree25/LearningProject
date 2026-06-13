@@ -5,7 +5,7 @@ import Logo from '../../Images/logo.svg'
 function Header() {
   return (
     <>
-    <header className="flex items-center justify-evenly bg-[#042439] w-full fixed z-10 gap-[20rem]">
+    <header className="flex flex-col lg:flex-row items-center justify-between bg-[#042439] w-full fixed z-10 py-4 px-6 lg:px-16 gap-4">
       <NavLink to='/'>
       <div className="logo">
         <img src={Logo} alt="logo" />
@@ -20,7 +20,7 @@ function Header() {
           <li><NavLink to='/contact' className={({isActive}) => isActive ? "active" : "deactive"}> Contact us </NavLink></li>
         </ul>
       </div>
-      <div className='flex gap-6'>
+      <div className='flex gap-4'>
         <NavLink to='/login' className={({isActive}) => isActive ? "deactive" : "deactive"}><button>Login</button></NavLink>
         <NavLink to='/signup' className={({isActive}) => isActive ? "deactive" : "deactive"}><button>Signup</button></NavLink>
       </div>

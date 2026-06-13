@@ -109,3 +109,25 @@
     color: #d41717;
     font-size: 0.9rem;
 }
+
+@media (max-w: 768px) {
+    .section {
+        flex-direction: column;
+        margin-left: 0;
+        padding: 1rem;
+    }
+    .right-part {
+        display: none;
+    }
+    .article {
+        width: 100%;
+        max-width: 23rem;
+    }
+    .rad-btns {
+        margin-left: 1rem;
+    }
+    .btn-4 {
+        margin-left: auto;
+        margin-right: auto;
+    }
+}

@@ -232,3 +232,82 @@ button:hover{
     display: flex;
     gap: 1rem;
 }
+
+@media (max-w: 1024px) {
+    .gapError {
+        height: 20vh;
+    }
+    header {
+        position: static !important;
+    }
+    .top {
+        flex-direction: column;
+        height: auto;
+        margin-top: 2vh;
+        align-items: center;
+        text-align: center;
+    }
+    .top .left {
+        width: 100%;
+        padding: 20px;
+        padding-left: 20px;
+    }
+    .top .left h1 {
+        font-size: 26px;
+        text-align: center;
+    }
+    .top .right {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        padding: 10px;
+    }
+    .top .right img {
+        width: 80%;
+        max-width: 320px;
+    }
+    .search {
+        width: 90% !important;
+        margin: 20px auto !important;
+        gap: 10px;
+    }
+    .fets2 {
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
+        padding: 2rem 0;
+    }
+    .content {
+        flex-direction: column;
+        padding: 0 1rem;
+        gap: 2rem;
+    }
+    .content .left-svg, .content .right-svg {
+        display: none;
+    }
+    .subjects {
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        margin: 2rem 1rem;
+    }
+    .footer {
+        flex-direction: column;
+        height: auto;
+        padding: 2rem 1rem;
+        gap: 2rem;
+        text-align: center;
+    }
+    .footer .leftPart {
+        align-items: center;
+    }
+    .rightPart .links {
+        justify-content: center;
+        width: 100%;
+        gap: 1rem;
+    }
+    .icons {
+        margin-left: 0 !important;
+        justify-content: center;
+        width: 100%;
+    }
+}
