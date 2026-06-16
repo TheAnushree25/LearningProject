@@ -47,7 +47,7 @@ function Contact() {
         <h4>Contact Us</h4>
         <hr className="underLine"/>
         <div className="content">
-          <img src={Mail} width={700} alt="" />
+          <img src={Mail} className="w-full max-w-[320px] md:max-w-[500px] lg:max-w-[700px] object-contain hidden md:block" alt="" />
           <form onSubmit={handlemsg} className="form-submit">
             <h4>Send Message</h4>
             <input
@@ -73,7 +73,7 @@ function Contact() {
               onChange={(e)=>setMsg(e.target.value)}
               required
             />
-            <button type="submit" className="w-[19rem] bg-light-blue-800">Send A Message</button>
+            <button type="submit" className="w-full max-w-[300px] bg-light-blue-800 py-3 rounded text-white font-bold hover:bg-opacity-95 transition duration-300">Send A Message</button>
           </form>
         </div>
       </div>

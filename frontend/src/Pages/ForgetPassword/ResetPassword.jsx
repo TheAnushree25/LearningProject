@@ -61,11 +61,11 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="h-[100vh] flex items-center justify-center">
+    <div className="h-[100vh] flex items-center justify-center p-4">
         
       <form 
         noValidate 
-        className="w-96 text-xl bg-cyan-900 p-10  shadow-[0_0_10px_white] flex flex-col gap-5 text-white font-semibold"
+        className="w-full max-w-[24rem] text-xl bg-cyan-900 p-6 md:p-10 shadow-[0_0_10px_white] flex flex-col gap-5 text-white font-semibold rounded-lg"
         onSubmit={handleSubmit}
       >
         <h1 className=' font-semibold text-2xl text-white'>This link is valid for 15 mins otherwise password will not updated</h1>

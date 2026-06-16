@@ -137,108 +137,111 @@ const Admin = () => {
       </nav>
 
       {/* Main Section */}
-      <div className="p-4 sm:p-8 md:p-12 lg:p-10">
-        <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-2xl border-b-2 font-semibold text-white border-white">
+      <div className="p-4 sm:p-8 md:p-12 lg:p-10 relative">
+        <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-2xl border-b-2 font-semibold text-white border-white pb-2">
           All New Request
         </h1>
 
-        <div onClick={()=> setOpen(prev => !prev)} className=" absolute right-10 top-[6.5rem] text-center cursor-pointer">
-            <h4 className="text-white bg-green-800 p-4 w-32">Messages</h4>
+        <div className="flex flex-col sm:flex-row gap-4 my-6">
+          <button onClick={()=> setOpen(prev => !prev)} className="text-white bg-green-800 hover:bg-green-700 py-3 px-6 rounded font-semibold cursor-pointer w-full sm:w-auto text-center">
+            Messages
+          </button>
+          
+          <button onClick={()=>navigator(`/admin/course/${data}`)} className="text-white bg-blue-800 hover:bg-blue-700 py-3 px-6 rounded font-semibold cursor-pointer w-full sm:w-auto text-center">
+            Course Requests
+          </button>
         </div>
         
-        <div onClick={()=>navigator(`/admin/course/${data}`)} className=" absolute right-52 top-[6.5rem] text-center cursor-pointer">
-            <h4 className="text-white bg-blue-800 p-4 w-44">Course Requests</h4>
-        </div>
-
         {open && (
-          <div className="mt-3 w-[30rem] absolute right-10 bg-gray-700 text-gray-100 p-5">
-            {allmsg.map((msg,index) => (
-              <div key={index} className="bg-gray-600 mb-5 rounded-sm p-2">
-                <p className="text-black">Name : <span className="text-white">{msg.name}</span></p>
-                <p className=" text-light-blue-600"><span className="text-black">Email : </span>{msg.email}</p>
-                <p><span className="text-black">Message : </span>{msg.message}</p>
+          <div className="mt-3 w-full max-w-lg bg-gray-700 text-gray-100 p-5 rounded border border-gray-600 shadow-xl mb-6">
+            <h3 className="text-lg font-bold border-b border-gray-600 pb-2 mb-4">Feedback Messages</h3>
+            {allmsg && allmsg.length > 0 ? allmsg.map((msg,index) => (
+              <div key={index} className="bg-gray-600 mb-4 rounded-sm p-3 border border-gray-500">
+                <p className="text-gray-300 font-semibold">Name : <span className="text-white font-normal">{msg.name}</span></p>
+                <p className="text-gray-300 font-semibold"><span className="text-gray-300">Email : </span><span className="text-blue-300 font-normal">{msg.email}</span></p>
+                <p className="text-gray-300 font-semibold"><span className="text-gray-300">Message : </span><span className="text-white font-normal">{msg.message}</span></p>
               </div>
-            ))}
-
+            )) : <p className="text-gray-400">No messages found.</p>}
           </div>
         )}
-</div>
+      </div>
        
-      
-      <div className="flex items-start justify-center gap-20">
-        <div className="rounded-md">
-          <h4 className="text-white bg-blue-gray-900 p-4 w-40">Student Request</h4>
+      <div className="flex flex-col lg:flex-row items-center lg:items-start justify-center gap-10 lg:gap-20 p-4 pb-20">
+        <div className="rounded-md w-full max-w-sm bg-gray-800 p-4 border border-gray-700 shadow-md">
+          <h4 className="text-white bg-blue-gray-900 p-3 rounded text-center font-bold">Student Request</h4>
           {
-            StudentData.length > 0 ? StudentData.map((student) => (
+            StudentData && StudentData.length > 0 ? StudentData.map((student) => (
               student.Isapproved === "pending" && (
                 <div
                   key={student._id}
                   onClick={() => docDetails("student", student._id)}
-                  className="flex justify-around items-center mt-8 p-8 bg-blue-gray-600 rounded-md cursor-pointer"
+                  className="flex justify-between items-center mt-4 p-4 bg-gray-700 hover:bg-gray-600 rounded-md cursor-pointer border border-gray-600 transition"
                 >
-                  <h1 className="text-[24px] text-1xl text-white mr-3">
+                  <h1 className="text-lg text-white font-semibold truncate mr-2">
                     {student.Firstname + " " + student.Lastname}
                   </h1>
-                  <p>Status: <span>{student.Isapproved}</span></p>
+                  <span className="text-xs bg-yellow-600 text-white px-2.5 py-1 rounded-full font-bold uppercase">{student.Isapproved}</span>
                 </div>
               )
-            )) : null
+            )) : <p className="text-gray-500 text-center py-4">No pending student requests.</p>
           }
         </div>
 
-        <div className="rounded-md">
-        <h4 className="text-white bg-blue-gray-900 p-4 w-40">Teacher Request</h4>
-        {
-            TeacherData.length > 0 ? TeacherData.map((teacher) => (
+        <div className="rounded-md w-full max-w-sm bg-gray-800 p-4 border border-gray-700 shadow-md">
+          <h4 className="text-white bg-blue-gray-900 p-3 rounded text-center font-bold">Teacher Request</h4>
+          {
+            TeacherData && TeacherData.length > 0 ? TeacherData.map((teacher) => (
               teacher.Isapproved === "pending" && (
                 <div
                   key={teacher._id}
                   onClick={() => docDetails("teacher", teacher._id)}
-                  className="flex justify-around items-center mt-8 p-8 bg-blue-gray-600 rounded-md cursor-pointer"
+                  className="flex justify-between items-center mt-4 p-4 bg-gray-700 hover:bg-gray-600 rounded-md cursor-pointer border border-gray-600 transition"
                 >
-                  <h1 className="text-[24px] text-1xl text-white mr-3">
+                  <h1 className="text-lg text-white font-semibold truncate mr-2">
                     {teacher.Firstname + " " + teacher.Lastname}
                   </h1>
-                  <p>Status: <span>{teacher.Isapproved}</span></p>
+                  <span className="text-xs bg-yellow-600 text-white px-2.5 py-1 rounded-full font-bold uppercase">{teacher.Isapproved}</span>
                 </div>
               )
-            )) : null
+            )) : <p className="text-gray-500 text-center py-4">No pending teacher requests.</p>
           }
         </div>
         
-        <div className="rounded-md">
-        <h4 className="text-white bg-red-500 p-4 w-40">Rejected Request</h4>
+        <div className="rounded-md w-full max-w-sm bg-gray-800 p-4 border border-gray-700 shadow-md">
+          <h4 className="text-white bg-red-800 p-3 rounded text-center font-bold">Rejected Request</h4>
           {
-            TeacherData.length > 0 ? TeacherData.map((teacher) => (
-              teacher.Isapproved === "rejected" && (
-                <div
-                  key={teacher._id}
-                  onClick={() => docDetails("teacher", teacher._id)}
-                  className="flex justify-around items-center mt-8 p-8 bg-blue-gray-600 rounded-md cursor-pointer"
-                >
-                  <h1 className="text-[24px] text-1xl text-white mr-3">
-                    {teacher.Firstname + " " + teacher.Lastname}
-                  </h1>
-                  <p>Msg: <span>{teacher.Remarks}</span></p>
-                </div>
-              )
-            )) : null
-          }
-          {
-            StudentData.length > 0 ? StudentData.map((student) => (
-              student.Isapproved === "rejected" && (
-                <div
-                  key={student._id}
-                  onClick={() => docDetails("student", student._id)}
-                  className="flex justify-around items-center mt-8 p-8 bg-blue-gray-600 rounded-md cursor-pointer"
-                >
-                  <h1 className="text-[24px] text-1xl text-white mr-3">
-                    {student.Firstname + " " + student.Lastname}
-                  </h1>
-                  <p>Msg: <span>{student.Remarks}</span></p>
-                </div>
-              )
-            )) : null
+            (TeacherData && TeacherData.some(t => t.Isapproved === "rejected")) || (StudentData && StudentData.some(s => s.Isapproved === "rejected")) ? (
+              <>
+                {TeacherData && TeacherData.map((teacher) => (
+                  teacher.Isapproved === "rejected" && (
+                    <div
+                      key={teacher._id}
+                      onClick={() => docDetails("teacher", teacher._id)}
+                      className="flex justify-between items-center mt-4 p-4 bg-gray-700 hover:bg-gray-600 rounded-md cursor-pointer border border-gray-600 transition"
+                    >
+                      <h1 className="text-lg text-white font-semibold truncate mr-2">
+                        {teacher.Firstname + " " + teacher.Lastname} (T)
+                      </h1>
+                      <span className="text-xs text-red-400 italic truncate max-w-[8rem]">{teacher.Remarks}</span>
+                    </div>
+                  )
+                ))}
+                {StudentData && StudentData.map((student) => (
+                  student.Isapproved === "rejected" && (
+                    <div
+                      key={student._id}
+                      onClick={() => docDetails("student", student._id)}
+                      className="flex justify-between items-center mt-4 p-4 bg-gray-700 hover:bg-gray-600 rounded-md cursor-pointer border border-gray-600 transition"
+                    >
+                      <h1 className="text-lg text-white font-semibold truncate mr-2">
+                        {student.Firstname + " " + student.Lastname} (S)
+                      </h1>
+                      <span className="text-xs text-red-400 italic truncate max-w-[8rem]">{student.Remarks}</span>
+                    </div>
+                  )
+                ))}
+              </>
+            ) : <p className="text-gray-500 text-center py-4">No rejected requests.</p>
           }
         </div>
         

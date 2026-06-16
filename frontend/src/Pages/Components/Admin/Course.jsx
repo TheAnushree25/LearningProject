@@ -158,7 +158,7 @@ const Course = () => {
 
 
   return (
-    <div className='h-[100vh]'>
+    <div className='min-h-screen h-auto pb-10 bg-[#011627]'>
            {/* Navbar */}
       <nav className="h-16 sm:h-20 md:h-24 lg:h-24  w-full bg-[#042439] flex justify-between items-center px-4 sm:px-8 md:px-12 lg:px-16 xl:px-20">
      
@@ -183,7 +183,7 @@ const Course = () => {
 
       {courseReq.length > 0 && (
         <div className="mt-3  text-gray-100 p-5">
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {courseReq.map((req, index) => (
               <div key={index} className="bg-gray-800 p-4 rounded-md shadow-[0_0_10px_white]">
                 <h2 className="text-lg text-yellow-500 font-bold">{req.coursename.toUpperCase()}</h2>

@@ -45,8 +45,8 @@ const Forgetpassword = () => {
   console.log(userType);
 
   return (
-    <section className='h-[100vh] flex items-center justify-center'>
-      <form noValidate className='w-96 p-10 flex flex-col justify-center gap-4 text-white shadow-[0_0_10px_white] bg-cyan-900 rounded-lg' onSubmit={onFormSubmit}>
+    <section className='h-[100vh] flex items-center justify-center p-4'>
+      <form noValidate className='w-full max-w-[24rem] p-6 md:p-10 flex flex-col justify-center gap-4 text-white shadow-[0_0_10px_white] bg-cyan-900 rounded-lg' onSubmit={onFormSubmit}>
         <h1 className='text-2xl font-bold text-white'>Forgot Your Password?</h1>
         <p className='text-lg text-white'>Enter your email address below to reset your password.</p>
         <label htmlFor='email' className='text-2xl text-white font-semibold rounded-md'>Email Address</label>

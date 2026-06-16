@@ -21,6 +21,14 @@
     gap: 2rem;
 }
 
+@media (max-w: 640px) {
+    .link-nav ul {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1rem;
+    }
+}
+
 button{
     background-color: #4979D1;
     border: none;
