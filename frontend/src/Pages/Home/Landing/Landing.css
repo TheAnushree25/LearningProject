@@ -236,12 +236,6 @@ button:hover{
 }
 
 @media (max-w: 1024px) {
-    .gapError {
-        height: 20vh;
-    }
-    header {
-        position: static !important;
-    }
     .top {
         flex-direction: column;
         height: auto;

@@ -46,3 +46,12 @@ button{
     color:#4979D1;
     text-decoration: none;
 }
+
+@media (max-w: 1024px) {
+    header {
+        position: static !important;
+    }
+    .gapError {
+        display: none !important;
+    }
+}
